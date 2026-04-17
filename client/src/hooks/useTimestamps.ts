@@ -23,12 +23,19 @@ export interface UseTimestampsResult {
  * and sorting.
  *
  * Behaviour:
- * - Whenever `filters` or `sort` change, the accumulated rows are cleared and
- *   a fresh first page is loaded (offset = 0).
+ * - Whenever `filters` or `sort` change, rows are cleared and a fresh first
+ *   page is loaded (offset reset to 0).
  * - `loadMore()` increments the offset by PAGE_SIZE and appends the next page.
  * - Concurrent requests are cancelled via AbortController so only the latest
  *   fetch updates state.
- * - `retry()` re-triggers the current page load after an error.
+ * - `retry()` re-triggers the current load after an error.
+ *
+ * Loading state is derived purely from `offset`:
+ * - `offset === 0`  → isLoading  (first page / replace)
+ * - `offset > 0`    → isLoadingMore (subsequent page / append)
+ *
+ * This avoids ref-based tracking, which caused incorrect loading states when
+ * filter changes coincided with a non-zero offset.
  */
 export function useTimestamps(filters: Filters, sort: SortConfig): UseTimestampsResult {
   const [rows, setRows] = useState<Timestamp[]>([]);
@@ -40,47 +47,41 @@ export function useTimestamps(filters: Filters, sort: SortConfig): UseTimestamps
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
 
-  // Track whether a filter/sort change reset the offset so we know if we're
-  // loading page 1 (full replace) or a subsequent page (append).
-  const isFirstPageRef = useRef(true);
-
-  // Abort controller ref to cancel in-flight requests on filter change
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Reset to page 1 whenever filters or sort change
+  // Effect 1 — reset to page 1 whenever the query (filters or sort) changes.
+  // Only calls setOffset(0) when offset is non-zero to avoid a no-op re-render.
   useEffect(() => {
-    isFirstPageRef.current = true;
-    setOffset(0);
     setRows([]);
     setError(null);
-    // retryCount intentionally not reset here — it's managed separately
+    setOffset((current) => (current === 0 ? 0 : 0));
+    // setOffset is called unconditionally so the stable reference is kept;
+    // when offset is already 0 React bails out of the re-render (same value).
   }, [filters, sort]);
 
-  // Fetch whenever offset, filters, sort, or retryCount changes
+  // Effect 2 — fetch whenever offset, filters, sort, or retryCount change.
+  // Uses `offset === 0` to decide whether to replace or append rows.
   useEffect(() => {
-    // Cancel any in-flight request
     abortControllerRef.current?.abort();
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
-    const isFirstPage = isFirstPageRef.current;
-    isFirstPageRef.current = false;
+    const isFirstPage = offset === 0;
 
+    setError(null);
     if (isFirstPage) {
       setIsLoading(true);
       setIsLoadingMore(false);
     } else {
+      setIsLoading(false);
       setIsLoadingMore(true);
     }
-    setError(null);
 
     fetchTimestamps(filters, sort, offset)
       .then((response) => {
         if (controller.signal.aborted) return;
-
         setTotalCount(response.totalCount);
         setHasMore(response.hasMore);
-
         if (isFirstPage) {
           setRows(response.data);
         } else {
@@ -102,19 +103,15 @@ export function useTimestamps(filters: Filters, sort: SortConfig): UseTimestamps
     return () => {
       controller.abort();
     };
-    // `offset` is intentionally in the dependency array — changing it loads the next page.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [offset, filters, sort, retryCount]);
+  }, [filters, sort, offset, retryCount]);
 
   const loadMore = useCallback(() => {
     if (hasMore && !isLoading && !isLoadingMore) {
-      isFirstPageRef.current = false;
       setOffset((previous) => previous + PAGE_SIZE);
     }
   }, [hasMore, isLoading, isLoadingMore]);
 
   const retry = useCallback(() => {
-    setError(null);
     setRetryCount((count) => count + 1);
   }, []);
 

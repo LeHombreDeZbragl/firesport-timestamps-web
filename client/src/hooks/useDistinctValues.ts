@@ -16,7 +16,7 @@ export interface UseDistinctYearsResult {
   error: string | null;
 }
 
-type AutocompleteColumn = 'team' | 'category' | 'league' | 'place' | 'attack_type';
+export type AutocompleteColumn = 'team' | 'category' | 'league' | 'place' | 'attack_type';
 
 // ─── Text column hook ──────────────────────────────────────────────────────────
 
