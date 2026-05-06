@@ -122,7 +122,7 @@ export function SortableHeader({
             className={`
               inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide
               whitespace-nowrap transition-colors focus:outline-none focus-visible:underline
-              ${isActive ? 'cursor-pointer text-accent-500' : 'cursor-pointer text-surface-400 hover:text-surface-200'}
+              ${isActive ? 'cursor-pointer text-primary-400' : 'cursor-pointer text-surface-400 hover:text-surface-200'}
             `}
             aria-sort={
               isActive

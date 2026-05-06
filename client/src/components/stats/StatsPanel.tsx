@@ -40,7 +40,7 @@ interface StatsPanelProps {
 export function StatsPanel({ stats, isLoading }: StatsPanelProps): React.JSX.Element {
   return (
     <section aria-label="Statistics">
-      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
         <StatCard
           label="Celkem útoků"
           value={stats ? stats.totalCount.toLocaleString() : '—'}
@@ -61,15 +61,17 @@ export function StatsPanel({ stats, isLoading }: StatsPanelProps): React.JSX.Ele
           value={formatTime(stats?.medianTime ?? null)}
           isLoading={isLoading}
         />
-        <StatCard
-          label="Poměr rychlejšího LP : PP"
-          value={
-            stats
-              ? formatRatio(stats.lpFasterCount, stats.ppFasterCount, stats.equalCount)
-              : '—'
-          }
-          isLoading={isLoading}
-        />
+        <div className="col-span-2 xl:col-span-1">
+          <StatCard
+            label="Poměr rychlejšího LP : PP"
+            value={
+              stats
+                ? formatRatio(stats.lpFasterCount, stats.ppFasterCount, stats.equalCount)
+                : '—'
+            }
+            isLoading={isLoading}
+          />
+        </div>
       </dl>
     </section>
   );

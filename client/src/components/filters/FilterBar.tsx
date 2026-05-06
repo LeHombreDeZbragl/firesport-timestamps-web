@@ -27,17 +27,12 @@ export function FilterBar({
           onAdd={(v) => onAddFilter('team', v)}
           onRemove={(v) => onRemoveFilter('team', v)}
         />
-        <ButtonGroupFilter
-          column="category"
-          label="Kategorie"
-          selectedValues={filters.category}
-          onToggle={(v) => {
-            if (filters.category.includes(v)) {
-              onRemoveFilter('category', v);
-            } else {
-              onAddFilter('category', v);
-            }
-          }}
+        <AutocompleteFilter
+          column="place"
+          label="Místo"
+          selectedValues={filters.place}
+          onAdd={(v) => onAddFilter('place', v)}
+          onRemove={(v) => onRemoveFilter('place', v)}
         />
         <LeagueFilter
           selectedValues={filters.league}
@@ -49,13 +44,6 @@ export function FilterBar({
             }
           }}
         />
-        <AutocompleteFilter
-          column="place"
-          label="Místo"
-          selectedValues={filters.place}
-          onAdd={(v) => onAddFilter('place', v)}
-          onRemove={(v) => onRemoveFilter('place', v)}
-        />
         <ButtonGroupFilter
           column="attack_type"
           label="Typ útoku"
@@ -65,6 +53,18 @@ export function FilterBar({
               onRemoveFilter('attackType', v);
             } else {
               onAddFilter('attackType', v);
+            }
+          }}
+        />
+        <ButtonGroupFilter
+          column="category"
+          label="Kategorie"
+          selectedValues={filters.category}
+          onToggle={(v) => {
+            if (filters.category.includes(v)) {
+              onRemoveFilter('category', v);
+            } else {
+              onAddFilter('category', v);
             }
           }}
         />
