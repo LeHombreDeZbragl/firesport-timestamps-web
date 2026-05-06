@@ -1,4 +1,6 @@
 import { AutocompleteFilter } from './AutocompleteFilter';
+import { ButtonGroupFilter } from './ButtonGroupFilter';
+import { LeagueFilter } from './LeagueFilter';
 import { YearFilter } from './YearFilter';
 import type { Filters, FilterKey } from '../../types';
 
@@ -20,38 +22,51 @@ export function FilterBar({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <AutocompleteFilter
           column="team"
-          label="Team"
+          label="Tým"
           selectedValues={filters.team}
           onAdd={(v) => onAddFilter('team', v)}
           onRemove={(v) => onRemoveFilter('team', v)}
         />
-        <AutocompleteFilter
+        <ButtonGroupFilter
           column="category"
-          label="Category"
+          label="Kategorie"
           selectedValues={filters.category}
-          onAdd={(v) => onAddFilter('category', v)}
-          onRemove={(v) => onRemoveFilter('category', v)}
+          onToggle={(v) => {
+            if (filters.category.includes(v)) {
+              onRemoveFilter('category', v);
+            } else {
+              onAddFilter('category', v);
+            }
+          }}
         />
-        <AutocompleteFilter
-          column="league"
-          label="League"
+        <LeagueFilter
           selectedValues={filters.league}
-          onAdd={(v) => onAddFilter('league', v)}
-          onRemove={(v) => onRemoveFilter('league', v)}
+          onToggle={(v) => {
+            if (filters.league.includes(v)) {
+              onRemoveFilter('league', v);
+            } else {
+              onAddFilter('league', v);
+            }
+          }}
         />
         <AutocompleteFilter
           column="place"
-          label="Place"
+          label="Místo"
           selectedValues={filters.place}
           onAdd={(v) => onAddFilter('place', v)}
           onRemove={(v) => onRemoveFilter('place', v)}
         />
-        <AutocompleteFilter
+        <ButtonGroupFilter
           column="attack_type"
-          label="Attack Type"
+          label="Typ útoku"
           selectedValues={filters.attackType}
-          onAdd={(v) => onAddFilter('attackType', v)}
-          onRemove={(v) => onRemoveFilter('attackType', v)}
+          onToggle={(v) => {
+            if (filters.attackType.includes(v)) {
+              onRemoveFilter('attackType', v);
+            } else {
+              onAddFilter('attackType', v);
+            }
+          }}
         />
         <YearFilter
           selectedYears={filters.year}
@@ -71,7 +86,7 @@ export function FilterBar({
           onClick={onClearAll}
           className="rounded-md border border-surface-500 bg-surface-700 px-4 py-1.5 text-sm font-semibold text-surface-200 hover:border-primary-400 hover:bg-surface-600 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 transition-colors"
         >
-          Clear all filters
+          Vymazat všechny filtry
         </button>
       </div>
     </section>

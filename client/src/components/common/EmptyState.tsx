@@ -2,7 +2,7 @@ interface EmptyStateProps {
   message?: string;
 }
 
-export function EmptyState({ message = 'No results found.' }: EmptyStateProps): React.JSX.Element {
+export function EmptyState({ message = 'Nebyly nalezeny žádné výsledky.' }: EmptyStateProps): React.JSX.Element {
   return (
     <div className="flex flex-col items-center gap-3 py-16 text-center">
       <svg

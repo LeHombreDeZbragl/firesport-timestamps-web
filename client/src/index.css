@@ -41,7 +41,7 @@
 
   /* Custom breakpoints */
   /* "compact" — below this the table overflows and column icons replace text labels */
-  --breakpoint-compact: 1200px;
+  --breakpoint-compact: 1300px;
 
   /* Default font */
   --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,

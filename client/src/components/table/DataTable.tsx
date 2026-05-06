@@ -287,10 +287,10 @@ export function DataTable({
             {isLoadingMore ? (
               <>
                 <LoadingSpinner size="sm" />
-                Loading…
+                Načítání…
               </>
             ) : (
-              `Load more (${remaining.toLocaleString()} remaining)`
+              `Načíst dalších 50 (${remaining.toLocaleString()} zbývá)`
             )}
           </button>
         </div>

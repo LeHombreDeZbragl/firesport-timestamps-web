@@ -42,27 +42,27 @@ export function StatsPanel({ stats, isLoading }: StatsPanelProps): React.JSX.Ele
     <section aria-label="Statistics">
       <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <StatCard
-          label="Total Attacks"
+          label="Celkem útoků"
           value={stats ? stats.totalCount.toLocaleString() : '—'}
           isLoading={isLoading}
         />
         <StatCard
-          label="Average Time"
+          label="Průměrný čas"
           value={formatTime(stats?.averageTime ?? null)}
           isLoading={isLoading}
         />
         <StatCard
-          label="Best Time"
+          label="Nejlepší čas"
           value={formatTime(stats?.bestTime ?? null)}
           isLoading={isLoading}
         />
         <StatCard
-          label="Median Time"
+          label="Medián času"
           value={formatTime(stats?.medianTime ?? null)}
           isLoading={isLoading}
         />
         <StatCard
-          label="LP : PP Ratio"
+          label="Poměr rychlejšího LP : PP"
           value={
             stats
               ? formatRatio(stats.lpFasterCount, stats.ppFasterCount, stats.equalCount)

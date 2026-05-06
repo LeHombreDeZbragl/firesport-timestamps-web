@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useDebounce } from '../../hooks/useDebounce';
 import { useDistinctValues, type AutocompleteColumn } from '../../hooks/useDistinctValues';
 import { FilterPill } from './FilterPill';
 
@@ -23,8 +22,8 @@ export function AutocompleteFilter({
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const debouncedSearch = useDebounce(inputValue, 300);
-  const { values, isLoading } = useDistinctValues(column, debouncedSearch);
+  // Pass inputValue directly — useDistinctValues debounces internally (300ms).
+  const { values, isLoading } = useDistinctValues(column, inputValue);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -49,7 +48,16 @@ export function AutocompleteFilter({
     [selectedValues, onAdd],
   );
 
-  const filteredValues = values.filter((v) => !selectedValues.includes(v));
+  const filteredValues = values
+    .filter((v) => !selectedValues.includes(v))
+    .sort((a, b) => {
+      const q = inputValue.toLowerCase();
+      if (!q) return 0;
+      const aPos = a.toLowerCase().indexOf(q);
+      const bPos = b.toLowerCase().indexOf(q);
+      // Items where query appears earlier rank higher; -1 (no match) goes to end.
+      return (aPos === -1 ? Infinity : aPos) - (bPos === -1 ? Infinity : bPos);
+    });
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -75,7 +83,7 @@ export function AutocompleteFilter({
             setIsOpen(true);
           }}
           onFocus={() => setIsOpen(true)}
-          placeholder={`Search ${label.toLowerCase()}…`}
+          placeholder={`Vyhledat ${label.toLowerCase()}…`}
           className="w-full rounded-md border border-surface-600 bg-surface-800 px-3 py-1.5 text-sm text-surface-100 placeholder-surface-500 focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40 transition-colors"
         />
 
@@ -85,11 +93,11 @@ export function AutocompleteFilter({
             className="absolute z-50 mt-1 max-h-48 w-full overflow-y-auto rounded-md border border-surface-600 bg-surface-800 py-1 shadow-lg"
           >
             {isLoading ? (
-              <li className="px-3 py-2 text-xs text-surface-400">Loading…</li>
+              <li className="px-3 py-2 text-xs text-surface-400">Načítání…</li>
             ) : filteredValues.length === 0 ? (
-              <li className="px-3 py-2 text-xs text-surface-400">No options</li>
+              <li className="px-3 py-2 text-xs text-surface-400">Žádné možnosti</li>
             ) : (
-              filteredValues.slice(0, 8).map((v) => (
+              filteredValues.slice(0, 20).map((v) => (
                 <li
                   key={v}
                   role="option"
