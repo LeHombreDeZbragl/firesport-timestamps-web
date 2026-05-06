@@ -14,6 +14,8 @@ export interface UseTimestampsResult {
   error: string | null;
   loadMore: () => void;
   retry: () => void;
+  /** Resets to page 1 and re-fetches — use after mutations (e.g. delete). */
+  reload: () => void;
 }
 
 // ─── Hook ──────────────────────────────────────────────────────────────────────
@@ -115,6 +117,12 @@ export function useTimestamps(filters: Filters, sort: SortConfig): UseTimestamps
     setRetryCount((count) => count + 1);
   }, []);
 
+  const reload = useCallback(() => {
+    // Reset to page 1 and force a fresh fetch (used after deleting a row).
+    setOffset(0);
+    setRetryCount((count) => count + 1);
+  }, []);
+
   return {
     rows,
     totalCount,
@@ -124,5 +132,6 @@ export function useTimestamps(filters: Filters, sort: SortConfig): UseTimestamps
     error,
     loadMore,
     retry,
+    reload,
   };
 }

@@ -1,3 +1,5 @@
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
+
 // ─── Database row ──────────────────────────────────────────────────────────────
 
 /**
@@ -24,6 +26,7 @@ export interface Timestamp {
   pp_vystrik: number | null;
   lp: number | null;
   pp: number | null;
+  final_time: number | null; // generated: GREATEST(lp, pp) when both non-null
 }
 
 // ─── Filters ───────────────────────────────────────────────────────────────────
@@ -66,7 +69,8 @@ export type SortableColumn =
   | 'lp_vystrik'
   | 'pp_vystrik'
   | 'lp'
-  | 'pp';
+  | 'pp'
+  | 'final_time';
 
 export type SortOrder = 'asc' | 'desc';
 
@@ -107,6 +111,11 @@ export interface ColumnDefinition {
    * default string coercion. Receives the raw value (may be null).
    */
   format?: (value: Timestamp[keyof Timestamp]) => string;
+  /**
+   * Optional Font Awesome icon shown instead of the label on narrow screens.
+   * When set, the label is shown only on sm+ screens; the icon is shown on xs.
+   */
+  icon?: IconDefinition;
 }
 
 // ─── Stats ─────────────────────────────────────────────────────────────────────

@@ -20,7 +20,7 @@ export function ClickableCell({
   // Special rendering: link column
   if (columnDef.key === 'link' && typeof value === 'string' && value.length > 0) {
     return (
-      <td className="px-3 py-2">
+      <td className="overflow-x-auto whitespace-nowrap px-3 py-2">
         <a
           href={value}
           target="_blank"
@@ -40,7 +40,7 @@ export function ClickableCell({
     const strValue = String(value);
     return (
       <td
-        className="cursor-pointer px-3 py-2 text-sm text-surface-200 hover:text-primary-300 hover:bg-primary-900/30 transition-colors"
+        className="cursor-pointer overflow-x-auto whitespace-nowrap px-3 py-2 text-sm text-surface-200 hover:bg-primary-900/30 hover:text-primary-300 transition-colors"
         onClick={() => onAddFilter(filterKey, strValue)}
         title={`Filter by ${columnDef.label}: ${strValue}`}
         role="button"
@@ -59,7 +59,7 @@ export function ClickableCell({
 
   // Non-filterable column
   return (
-    <td className="px-3 py-2 text-sm text-surface-200">
+    <td className="overflow-x-auto whitespace-nowrap px-3 py-2 text-sm text-surface-200">
       {displayValue === '' ? '—' : displayValue}
     </td>
   );

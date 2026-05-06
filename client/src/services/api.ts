@@ -111,3 +111,11 @@ export async function fetchDistinctYears(): Promise<number[]> {
 
   return response.data.years;
 }
+
+/**
+ * Deletes a single timestamp row by id.
+ * Intended for debugging/admin use only.
+ */
+export async function deleteTimestamp(id: number): Promise<void> {
+  await apiClient.delete(`/timestamps/${id}`);
+}

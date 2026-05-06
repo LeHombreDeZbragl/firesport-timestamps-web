@@ -1,11 +1,6 @@
 import { Router, Request, Response } from 'express';
 import supabase from '../services/supabaseClient';
-import {
-  buildTimestampsQuery,
-  buildStatsQuery,
-  buildDistinctValuesQuery,
-} from '../services/queryBuilder';
-import { computeStats } from '../services/statsCalculator';
+import { buildTimestampsQuery } from '../services/queryBuilder';
 import {
   parseFilters,
   parseSort,
@@ -13,6 +8,7 @@ import {
   validateAutocompleteColumn,
   parseSearchTerm,
   asAutocompleteColumn,
+  parseId,
 } from '../middleware/validation';
 import {
   type TimestampsResponse,
@@ -66,21 +62,46 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
 // ─── GET /api/timestamps/stats ─────────────────────────────────────────────────
 //
 // Returns aggregate statistics over ALL rows matching the active filters.
-// Uses the same filter params as the main endpoint but no sort/pagination.
+// Delegates to the `get_timestamps_stats` Supabase RPC so that statistics are
+// computed over the full dataset (not capped by Supabase's JS row limit).
 //
 router.get('/stats', async (req: Request, res: Response): Promise<void> => {
   const filters = parseFilters(req.query);
 
-  const { data, error, count } = await buildStatsQuery(supabase, filters);
+  const { data, error } = await supabase.rpc('get_timestamps_stats', {
+    p_team:        filters.team.length        > 0 ? filters.team        : null,
+    p_category:    filters.category.length    > 0 ? filters.category    : null,
+    p_year:        filters.year.length        > 0 ? filters.year        : null,
+    p_league:      filters.league.length      > 0 ? filters.league      : null,
+    p_place:       filters.place.length       > 0 ? filters.place       : null,
+    p_attack_type: filters.attackType.length  > 0 ? filters.attackType  : null,
+  });
 
   if (error) {
-    console.error('[GET /api/timestamps/stats] Supabase error:', error.message);
+    console.error('[GET /api/timestamps/stats] Supabase RPC error:', error.message);
     res.status(500).json({ error: 'Failed to fetch stats.' });
     return;
   }
 
-  const totalCount = count ?? 0;
-  const stats: StatsResponse = computeStats(data ?? [], totalCount);
+  // RPC returns a single row; Supabase wraps it in an array.
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) {
+    res.json({
+      averageTime: null, bestTime: null, medianTime: null,
+      lpFasterCount: 0, ppFasterCount: 0, equalCount: 0, totalCount: 0,
+    });
+    return;
+  }
+
+  const stats: StatsResponse = {
+    averageTime:   row.average_time   ?? null,
+    bestTime:      row.best_time      ?? null,
+    medianTime:    row.median_time    ?? null,
+    lpFasterCount: Number(row.lp_faster   ?? 0),
+    ppFasterCount: Number(row.pp_faster   ?? 0),
+    equalCount:    Number(row.equal_count ?? 0),
+    totalCount:    Number(row.total_count ?? 0),
+  };
 
   res.json(stats);
 });
@@ -112,6 +133,7 @@ router.get('/distinct/years', async (_req: Request, res: Response): Promise<void
 //
 // Returns distinct values for a whitelisted text column.
 // Supports optional case-insensitive partial matching via ?search=...
+// Delegates to the `get_distinct_column_values` Supabase RPC.
 //
 // :column must be one of: team, category, league, place, attack_type
 //
@@ -122,28 +144,48 @@ router.get(
     const column = asAutocompleteColumn(req.params['column'] as string);
     const searchTerm = parseSearchTerm(req.query);
 
-    const { data, error } = await buildDistinctValuesQuery(supabase, column, searchTerm);
+    const { data, error } = await supabase.rpc('get_distinct_column_values', {
+      p_column: column,
+      p_search: searchTerm,
+    });
 
     if (error) {
-      console.error(`[GET /api/timestamps/distinct/${column}] Supabase error:`, error.message);
+      console.error(`[GET /api/timestamps/distinct/${column}] Supabase RPC error:`, error.message);
       res.status(500).json({ error: `Failed to fetch distinct values for "${column}".` });
       return;
     }
 
-    // De-duplicate in Node.js (Supabase JS does not support SELECT DISTINCT natively)
-    const seen = new Set<string>();
-    const values: string[] = [];
-    for (const row of data ?? []) {
-      const value = (row as Record<string, string>)[column];
-      if (typeof value === 'string' && value.length > 0 && !seen.has(value)) {
-        seen.add(value);
-        values.push(value);
-      }
-    }
-
+    const values: string[] = (data as Array<{ value: string }>).map((row) => row.value);
     const response: DistinctValuesResponse = { values };
     res.json(response);
   }
 );
+
+// ─── DELETE /api/timestamps/:id ────────────────────────────────────────────────
+//
+// Deletes a single timestamp row by its numeric id.
+// Intended for debugging/admin purposes.
+//
+router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
+  const id = parseId(req.params['id']);
+
+  if (id === null) {
+    res.status(400).json({ error: 'Invalid id. Must be a positive integer.' });
+    return;
+  }
+
+  const { error } = await supabase
+    .from('timestamps')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error(`[DELETE /api/timestamps/${id}] Supabase error:`, error.message);
+    res.status(500).json({ error: 'Failed to delete timestamp.' });
+    return;
+  }
+
+  res.status(204).send();
+});
 
 export default router;

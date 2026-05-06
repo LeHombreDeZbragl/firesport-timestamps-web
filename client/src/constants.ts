@@ -1,3 +1,4 @@
+import { faClock, faPeopleLine, faRankingStar } from '@fortawesome/free-solid-svg-icons';
 import type { ColumnDefinition, Filters, SortConfig } from './types/index';
 
 // ─── Pagination ────────────────────────────────────────────────────────────────
@@ -7,8 +8,8 @@ export const PAGE_SIZE = 50;
 // ─── Default state ─────────────────────────────────────────────────────────────
 
 export const DEFAULT_SORT: SortConfig = {
-  column: 'attack_date',
-  order: 'desc',
+  column: 'final_time',
+  order: 'asc',
 };
 
 export const EMPTY_FILTERS: Filters = {
@@ -29,130 +30,19 @@ export const EMPTY_FILTERS: Filters = {
 // `defaultVisible: false` columns are included in the config but hidden until
 // the user explicitly enables them (column visibility toggle — Phase 5+).
 
+// Column order for the visible table:
+// tým → lp → pp → výsledný čas → typ → kategorie → liga → umístění → datum → místo
+// Hidden columns follow at the end.
 export const COLUMN_DEFINITIONS: ColumnDefinition[] = [
-  {
-    key: 'id',
-    label: 'ID',
-    filterable: false,
-    sortable: true,
-    sortColumn: 'id',
-    defaultVisible: true,
-  },
-  {
-    key: 'attack_date',
-    label: 'Date',
-    filterable: false,
-    sortable: true,
-    sortColumn: 'attack_date',
-    defaultVisible: true,
-    format: (value) => (typeof value === 'string' ? value : '-'),
-  },
-  {
-    key: 'league',
-    label: 'League',
-    filterable: true,
-    filterKey: 'league',
-    sortable: true,
-    sortColumn: 'league',
-    defaultVisible: true,
-  },
-  {
-    key: 'place',
-    label: 'Place',
-    filterable: true,
-    filterKey: 'place',
-    sortable: true,
-    sortColumn: 'place',
-    defaultVisible: true,
-  },
-  {
-    key: 'placement',
-    label: 'Placement',
-    filterable: false,
-    sortable: true,
-    sortColumn: 'placement',
-    defaultVisible: true,
-  },
-  {
-    key: 'attack_type',
-    label: 'Attack Type',
-    filterable: true,
-    filterKey: 'attackType',
-    sortable: true,
-    sortColumn: 'attack_type',
-    defaultVisible: true,
-  },
-  {
-    key: 'category',
-    label: 'Category',
-    filterable: true,
-    filterKey: 'category',
-    sortable: true,
-    sortColumn: 'category',
-    defaultVisible: true,
-  },
+  // ── Visible columns (in display order) ────────────────────────────────────
   {
     key: 'team',
-    label: 'Team',
+    label: 'Tým',
     filterable: true,
     filterKey: 'team',
     sortable: true,
     sortColumn: 'team',
     defaultVisible: true,
-  },
-  {
-    key: 'kos',
-    label: 'KOS',
-    filterable: false,
-    sortable: true,
-    sortColumn: 'kos',
-    defaultVisible: true,
-    format: (value) => (value !== null && value !== undefined ? String(value) : '-'),
-  },
-  {
-    key: 'naber',
-    label: 'Naber',
-    filterable: false,
-    sortable: true,
-    sortColumn: 'naber',
-    defaultVisible: true,
-    format: (value) => (value !== null && value !== undefined ? String(value) : '-'),
-  },
-  {
-    key: 'kohout',
-    label: 'Kohout',
-    filterable: false,
-    sortable: true,
-    sortColumn: 'kohout',
-    defaultVisible: true,
-    format: (value) => (value !== null && value !== undefined ? String(value) : '-'),
-  },
-  {
-    key: 'rozdelovac',
-    label: 'Rozdělovač',
-    filterable: false,
-    sortable: true,
-    sortColumn: 'rozdelovac',
-    defaultVisible: true,
-    format: (value) => (value !== null && value !== undefined ? String(value) : '-'),
-  },
-  {
-    key: 'lp_vystrik',
-    label: 'LP Výstřik',
-    filterable: false,
-    sortable: true,
-    sortColumn: 'lp_vystrik',
-    defaultVisible: true,
-    format: (value) => (value !== null && value !== undefined ? String(value) : '-'),
-  },
-  {
-    key: 'pp_vystrik',
-    label: 'PP Výstřik',
-    filterable: false,
-    sortable: true,
-    sortColumn: 'pp_vystrik',
-    defaultVisible: true,
-    format: (value) => (value !== null && value !== undefined ? String(value) : '-'),
   },
   {
     key: 'lp',
@@ -173,18 +63,151 @@ export const COLUMN_DEFINITIONS: ColumnDefinition[] = [
     format: (value) => (value !== null && value !== undefined ? String(value) : '-'),
   },
   {
+    key: 'final_time',
+    label: 'Výsledný čas',
+    filterable: false,
+    sortable: true,
+    sortColumn: 'final_time',
+    defaultVisible: true,
+    icon: faClock,
+    format: (value) => (value !== null && value !== undefined ? String(value) : '-'),
+  },
+  {
+    key: 'attack_type',
+    label: 'Typ',
+    filterable: true,
+    filterKey: 'attackType',
+    sortable: true,
+    sortColumn: 'attack_type',
+    defaultVisible: true,
+  },
+  {
+    key: 'category',
+    label: 'Kategorie',
+    filterable: true,
+    filterKey: 'category',
+    sortable: true,
+    sortColumn: 'category',
+    defaultVisible: true,
+    icon: faPeopleLine,
+  },
+  {
+    key: 'league',
+    label: 'Liga',
+    filterable: true,
+    filterKey: 'league',
+    sortable: true,
+    sortColumn: 'league',
+    defaultVisible: true,
+  },
+  {
+    key: 'placement',
+    label: 'Umístění',
+    filterable: false,
+    sortable: true,
+    sortColumn: 'placement',
+    defaultVisible: true,
+    icon: faRankingStar,
+  },
+  {
+    key: 'attack_date',
+    label: 'Datum',
+    filterable: false,
+    sortable: true,
+    sortColumn: 'attack_date',
+    defaultVisible: true,
+    format: (value) => {
+      if (typeof value !== 'string') return '-';
+      const [y, m, d] = value.split('-');
+      if (!y || !m || !d) return value;
+      return `${+d}.${+m}.${y}`;
+    },
+  },
+  {
+    key: 'place',
+    label: 'Místo',
+    filterable: true,
+    filterKey: 'place',
+    sortable: true,
+    sortColumn: 'place',
+    defaultVisible: true,
+  },
+  // ── Hidden columns ─────────────────────────────────────────────────────────
+  {
+    key: 'id',
+    label: 'ID',
+    filterable: false,
+    sortable: true,
+    sortColumn: 'id',
+    defaultVisible: false,
+  },
+  {
+    key: 'kos',
+    label: 'Koš',
+    filterable: false,
+    sortable: true,
+    sortColumn: 'kos',
+    defaultVisible: false,
+    format: (value) => (value !== null && value !== undefined ? String(value) : '-'),
+  },
+  {
+    key: 'naber',
+    label: 'Náběr',
+    filterable: false,
+    sortable: true,
+    sortColumn: 'naber',
+    defaultVisible: false,
+    format: (value) => (value !== null && value !== undefined ? String(value) : '-'),
+  },
+  {
+    key: 'kohout',
+    label: 'Kohout',
+    filterable: false,
+    sortable: true,
+    sortColumn: 'kohout',
+    defaultVisible: false,
+    format: (value) => (value !== null && value !== undefined ? String(value) : '-'),
+  },
+  {
+    key: 'rozdelovac',
+    label: 'Rozdělovač',
+    filterable: false,
+    sortable: true,
+    sortColumn: 'rozdelovac',
+    defaultVisible: false,
+    format: (value) => (value !== null && value !== undefined ? String(value) : '-'),
+  },
+  {
+    key: 'lp_vystrik',
+    label: 'LP Výstřik',
+    filterable: false,
+    sortable: true,
+    sortColumn: 'lp_vystrik',
+    defaultVisible: false,
+    format: (value) => (value !== null && value !== undefined ? String(value) : '-'),
+  },
+  {
+    key: 'pp_vystrik',
+    label: 'PP Výstřik',
+    filterable: false,
+    sortable: true,
+    sortColumn: 'pp_vystrik',
+    defaultVisible: false,
+    format: (value) => (value !== null && value !== undefined ? String(value) : '-'),
+  },
+  {
     key: 'link',
     label: 'Link',
     filterable: false,
     sortable: false,
-    defaultVisible: true,
+    defaultVisible: false,
   },
   {
     key: 'created_at',
     label: 'Created At',
     filterable: false,
     sortable: false,
-    defaultVisible: false,  // hidden by default — available for future column toggle
+    defaultVisible: false,
   },
 ];
 
@@ -194,11 +217,11 @@ export const COLUMN_DEFINITIONS: ColumnDefinition[] = [
 // and filter group headings.
 
 export const FILTER_LABELS: Record<keyof Filters, string> = {
-  team: 'Team',
-  category: 'Category',
-  year: 'Year',
-  league: 'League',
-  place: 'Place',
+  team: 'Tým',
+  category: 'Kategorie',
+  year: 'Rok',
+  league: 'Liga',
+  place: 'Místo',
   attackType: 'Attack Type',
 };
 

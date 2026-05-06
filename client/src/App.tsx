@@ -6,6 +6,7 @@ import { FilterBar } from './components/filters/FilterBar';
 import { StatsPanel } from './components/stats/StatsPanel';
 import { DataTable } from './components/table/DataTable';
 import { DEFAULT_SORT } from './constants';
+import { deleteTimestamp } from './services/api';
 import type { FilterKey, SortConfig } from './types';
 
 function App(): React.JSX.Element {
@@ -27,6 +28,7 @@ function App(): React.JSX.Element {
     error,
     loadMore,
     retry,
+    reload,
   } = useTimestamps(filters, sort);
 
   const { stats, isLoading: statsLoading } = useStats(filters);
@@ -53,6 +55,17 @@ function App(): React.JSX.Element {
       removeFilterValue(filterKey, toFilterValue(filterKey, value));
     },
     [removeFilterValue],
+  );
+
+  const handleDeleteRow = useCallback(
+    (id: number) => {
+      deleteTimestamp(id)
+        .then(() => reload())
+        .catch((err: unknown) => {
+          console.error('[handleDeleteRow] Failed to delete timestamp:', err);
+        });
+    },
+    [reload],
   );
 
   return (
@@ -92,6 +105,7 @@ function App(): React.JSX.Element {
           onAddFilter={handleAddFilter}
           onLoadMore={loadMore}
           onRetry={retry}
+          onDeleteRow={handleDeleteRow}
         />
       </main>
     </div>

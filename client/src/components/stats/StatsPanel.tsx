@@ -24,8 +24,8 @@ function formatTime(value: number | null): string {
   return `${value.toFixed(2)} s`;
 }
 
-function formatRatio(lpFaster: number, ppFaster: number, equal: number): string {
-  const total = lpFaster + ppFaster + equal;
+function formatRatio(lpFaster: number, ppFaster: number, _equal: number): string {
+  const total = lpFaster + ppFaster;
   if (total === 0) return '—';
   const lpPct = ((lpFaster / total) * 100).toFixed(0);
   const ppPct = ((ppFaster / total) * 100).toFixed(0);

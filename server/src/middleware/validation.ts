@@ -138,3 +138,14 @@ export function parseSearchTerm(query: Request['query']): string {
 export function asAutocompleteColumn(value: string): AutocompleteColumn {
   return value as AutocompleteColumn;
 }
+
+/**
+ * Parses a route param as a positive integer (row id).
+ * Returns null if the value is missing, non-numeric, or not a positive integer.
+ */
+export function parseId(value: unknown): number | null {
+  if (typeof value !== 'string') return null;
+  const parsed = parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0 || String(parsed) !== value) return null;
+  return parsed;
+}

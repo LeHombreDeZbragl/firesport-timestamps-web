@@ -24,6 +24,7 @@ export interface TimestampRow {
   pp_vystrik: number | null; // float4
   lp: number | null;        // float4
   pp: number | null;        // float4
+  final_time: number | null; // float4, generated: GREATEST(lp,pp) when both non-null
 }
 
 // ─── Filter inputs ─────────────────────────────────────────────────────────────
@@ -61,7 +62,8 @@ export type SortableColumn =
   | 'lp_vystrik'
   | 'pp_vystrik'
   | 'lp'
-  | 'pp';
+  | 'pp'
+  | 'final_time';
 
 export type SortOrder = 'asc' | 'desc';
 
@@ -126,6 +128,7 @@ export const SORTABLE_COLUMNS: readonly SortableColumn[] = [
   'pp_vystrik',
   'lp',
   'pp',
+  'final_time',
 ] as const;
 
 /** Supported autocomplete columns (validated whitelist). */
