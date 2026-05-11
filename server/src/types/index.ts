@@ -139,3 +139,13 @@ export const AUTOCOMPLETE_COLUMNS: readonly AutocompleteColumn[] = [
   'place',
   'attack_type',
 ] as const;
+
+// ─── Update payload ────────────────────────────────────────────────────────────
+
+/**
+ * Fields that can be sent in a PATCH /api/timestamps/:id request body.
+ * `id`, `created_at`, and `final_time` are excluded: the first two are
+ * immutable, the last is a GENERATED ALWAYS AS STORED column recomputed by
+ * the database automatically whenever `lp` or `pp` changes.
+ */
+export type UpdatePayload = Partial<Omit<TimestampRow, 'id' | 'created_at' | 'final_time'>>;

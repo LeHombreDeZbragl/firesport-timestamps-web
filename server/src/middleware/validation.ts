@@ -6,6 +6,7 @@ import {
   type ParsedSort,
   type ParsedPagination,
   type AutocompleteColumn,
+  type UpdatePayload,
 } from '../types/index';
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
@@ -148,4 +149,102 @@ export function parseId(value: unknown): number | null {
   const parsed = parseInt(value, 10);
   if (!Number.isFinite(parsed) || parsed <= 0 || String(parsed) !== value) return null;
   return parsed;
+}
+
+// ─── Update body validation ────────────────────────────────────────────────────
+
+const EDITABLE_STRING_FIELDS: ReadonlyArray<string> = [
+  'attack_date', 'league', 'place', 'link', 'attack_type', 'category', 'team',
+];
+
+const EDITABLE_NULLABLE_NUMERIC_FIELDS: ReadonlyArray<string> = [
+  'kos', 'naber', 'kohout', 'rozdelovac', 'lp_vystrik', 'pp_vystrik', 'lp', 'pp',
+];
+
+const EDITABLE_REQUIRED_NUMERIC_FIELDS: ReadonlyArray<string> = ['placement'];
+
+const ALL_EDITABLE_FIELDS = new Set<string>([
+  ...EDITABLE_STRING_FIELDS,
+  ...EDITABLE_NULLABLE_NUMERIC_FIELDS,
+  ...EDITABLE_REQUIRED_NUMERIC_FIELDS,
+]);
+
+const FORBIDDEN_UPDATE_FIELDS = new Set<string>(['id', 'created_at', 'final_time']);
+
+const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Parses and validates the request body for PATCH /api/timestamps/:id.
+ * Rejects forbidden fields (id, created_at, final_time), unknown fields,
+ * and type-invalid values.
+ */
+export function parseUpdateBody(
+  body: unknown,
+): { valid: true; data: UpdatePayload } | { valid: false; error: string } {
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    return { valid: false, error: 'Request body must be a JSON object.' };
+  }
+
+  const input = body as Record<string, unknown>;
+  const inputKeys = Object.keys(input);
+
+  if (inputKeys.length === 0) {
+    return { valid: false, error: 'No fields provided to update.' };
+  }
+
+  for (const key of inputKeys) {
+    if (FORBIDDEN_UPDATE_FIELDS.has(key)) {
+      return { valid: false, error: `Field "${key}" cannot be updated.` };
+    }
+  }
+
+  const unknownKeys = inputKeys.filter((k) => !ALL_EDITABLE_FIELDS.has(k));
+  if (unknownKeys.length > 0) {
+    return { valid: false, error: `Unknown field(s): ${unknownKeys.join(', ')}.` };
+  }
+
+  const data: Record<string, unknown> = {};
+
+  for (const key of inputKeys) {
+    const value = input[key];
+
+    if (EDITABLE_NULLABLE_NUMERIC_FIELDS.includes(key)) {
+      if (value === null) {
+        data[key] = null;
+      } else if (typeof value === 'number' && Number.isFinite(value)) {
+        data[key] = value;
+      } else {
+        return { valid: false, error: `Field "${key}" must be a finite number or null.` };
+      }
+    } else if (EDITABLE_REQUIRED_NUMERIC_FIELDS.includes(key)) {
+      if (
+        typeof value !== 'number' ||
+        !Number.isFinite(value) ||
+        value < 1 ||
+        !Number.isInteger(value)
+      ) {
+        return { valid: false, error: `Field "${key}" must be a positive integer.` };
+      }
+      data[key] = value;
+    } else if (key === 'attack_date') {
+      if (typeof value !== 'string' || !DATE_REGEX.test(value)) {
+        return {
+          valid: false,
+          error: 'Field "attack_date" must be a date string in YYYY-MM-DD format.',
+        };
+      }
+      data[key] = value;
+    } else {
+      // Remaining string fields
+      if (typeof value !== 'string') {
+        return { valid: false, error: `Field "${key}" must be a string.` };
+      }
+      if (key !== 'link' && value.trim() === '') {
+        return { valid: false, error: `Field "${key}" cannot be empty.` };
+      }
+      data[key] = value;
+    }
+  }
+
+  return { valid: true, data: data as UpdatePayload };
 }

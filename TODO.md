@@ -1,4 +1,8 @@
-- ADD new column for editing - it will be a pencil icon, when you click on it, the row will become editable and you can change the values in the cells, then you can click on a save button to save the changes (or a cancel button to discard them). This will require some backend work to update the database with the new values.
+- ADD some info (probably footer) about me and my info (maybe web page), and the source of the firesport.eu data
+
+- FIXES
+    - on headers make the sorting work when i click anywhere on the header, not just on the text
+    - when hovering cells that can be used for filtering, show more saturated color
 
 -ADD user identification
     - register, sign in, log out (maybe with google if possible)

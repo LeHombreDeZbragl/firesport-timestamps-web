@@ -7,6 +7,8 @@ import type {
   Stats,
   DistinctValuesApiResponse,
   DistinctYearsApiResponse,
+  Timestamp,
+  EditableTimestampFields,
 } from '../types/index';
 
 // ─── Axios instance ─────────────────────────────────────────────────────────────
@@ -118,4 +120,16 @@ export async function fetchDistinctYears(): Promise<number[]> {
  */
 export async function deleteTimestamp(id: number): Promise<void> {
   await apiClient.delete(`/timestamps/${id}`);
+}
+
+/**
+ * Updates editable fields of a single timestamp row.
+ * Returns the full updated row, including the DB-recomputed `final_time`.
+ */
+export async function patchTimestamp(
+  id: number,
+  fields: EditableTimestampFields,
+): Promise<Timestamp> {
+  const response: AxiosResponse<Timestamp> = await apiClient.patch(`/timestamps/${id}`, fields);
+  return response.data;
 }

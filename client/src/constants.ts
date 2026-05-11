@@ -1,5 +1,5 @@
 import { faClock, faPeopleLine, faRankingStar } from '@fortawesome/free-solid-svg-icons';
-import type { ColumnDefinition, Filters, SortConfig } from './types/index';
+import type { ColumnDefinition, Filters, SortConfig, Timestamp } from './types/index';
 
 // ─── Pagination ────────────────────────────────────────────────────────────────
 
@@ -247,3 +247,42 @@ export const FILTER_KEY_TO_URL_PARAM: Record<keyof Filters, string> = {
   place: 'place',
   attackType: 'attack_type',
 };
+
+// ─── Inline row editing ────────────────────────────────────────────────────────────
+//
+// Metadata used by EditableCell and DataTable to drive inline editing.
+
+/** Maps each editable Timestamp field to its HTML input type. */
+export const EDITABLE_FIELD_INPUT_TYPE: Partial<Record<keyof Timestamp, 'text' | 'number' | 'date'>> = {
+  attack_date: 'date',
+  league: 'text',
+  place: 'text',
+  link: 'text',
+  attack_type: 'text',
+  category: 'text',
+  team: 'text',
+  placement: 'number',
+  kos: 'number',
+  naber: 'number',
+  kohout: 'number',
+  rozdelovac: 'number',
+  lp_vystrik: 'number',
+  pp_vystrik: 'number',
+  lp: 'number',
+  pp: 'number',
+};
+
+/** Nullable numeric fields: an empty input is treated as null, not 0. */
+export const NULLABLE_NUMERIC_FIELDS = new Set<keyof Timestamp>([
+  'kos', 'naber', 'kohout', 'rozdelovac', 'lp_vystrik', 'pp_vystrik', 'lp', 'pp',
+]);
+
+/** Fields the user cannot edit (id is immutable; final_time is DB-computed). */
+export const NON_EDITABLE_FIELDS = new Set<keyof Timestamp>([
+  'id', 'created_at', 'final_time',
+]);
+
+/** All editable field keys — used to initialise and serialise the edit draft. */
+export const EDITABLE_COLUMN_KEYS = Object.keys(
+  EDITABLE_FIELD_INPUT_TYPE,
+) as (keyof Timestamp)[];

@@ -9,6 +9,7 @@ import {
   parseSearchTerm,
   asAutocompleteColumn,
   parseId,
+  parseUpdateBody,
 } from '../middleware/validation';
 import {
   type TimestampsResponse,
@@ -160,7 +161,46 @@ router.get(
     res.json(response);
   }
 );
+// ─── PATCH /api/timestamps/:id ─────────────────────────────────────────────────────
+//
+// Updates editable fields of a single timestamp row.
+// Fields `id`, `created_at`, and `final_time` are not accepted:
+//   - `id` and `created_at` are immutable.
+//   - `final_time` is a GENERATED ALWAYS AS STORED column; the database
+//     recomputes it automatically whenever `lp` or `pp` changes.
+//
+router.patch('/:id', async (req: Request, res: Response): Promise<void> => {
+  const id = parseId(req.params['id']);
+  if (id === null) {
+    res.status(400).json({ error: 'Invalid id. Must be a positive integer.' });
+    return;
+  }
 
+  const result = parseUpdateBody(req.body);
+  if (!result.valid) {
+    res.status(400).json({ error: result.error });
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from('timestamps')
+    .update(result.data)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      res.status(404).json({ error: 'Timestamp not found.' });
+      return;
+    }
+    console.error(`[PATCH /api/timestamps/${id}] Supabase error:`, error.message);
+    res.status(500).json({ error: 'Failed to update timestamp.' });
+    return;
+  }
+
+  res.json(data);
+});
 // ─── DELETE /api/timestamps/:id ────────────────────────────────────────────────
 //
 // Deletes a single timestamp row by its numeric id.

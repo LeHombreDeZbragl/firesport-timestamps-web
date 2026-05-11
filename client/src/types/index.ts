@@ -160,3 +160,11 @@ export type FilterUrlParam =
   | 'league'
   | 'place'
   | 'attack_type';
+
+// ─── Inline row editing ────────────────────────────────────────────────────────────
+
+/**
+ * Fields that can be modified by the user via the inline row editor.
+ * `id` and `created_at` are immutable; `final_time` is computed by the DB.
+ */
+export type EditableTimestampFields = Omit<Timestamp, 'id' | 'created_at' | 'final_time'>;

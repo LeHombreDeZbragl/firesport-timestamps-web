@@ -6,8 +6,8 @@ import { FilterBar } from './components/filters/FilterBar';
 import { StatsPanel } from './components/stats/StatsPanel';
 import { DataTable } from './components/table/DataTable';
 import { DEFAULT_SORT } from './constants';
-import { deleteTimestamp } from './services/api';
-import type { FilterKey, SortConfig } from './types';
+import { deleteTimestamp, patchTimestamp } from './services/api';
+import type { FilterKey, SortConfig, EditableTimestampFields } from './types';
 
 function App(): React.JSX.Element {
   const {
@@ -68,6 +68,17 @@ function App(): React.JSX.Element {
     [reload],
   );
 
+  const handleUpdateRow = useCallback(
+    (id: number, fields: EditableTimestampFields) => {
+      patchTimestamp(id, fields)
+        .then(() => reload())
+        .catch((err: unknown) => {
+          console.error('[handleUpdateRow] Failed to update timestamp:', err);
+        });
+    },
+    [reload],
+  );
+
   return (
     <div className="min-h-screen flex flex-col bg-surface-950 text-surface-100">
       {/* ── Header ── */}
@@ -106,6 +117,7 @@ function App(): React.JSX.Element {
           onLoadMore={loadMore}
           onRetry={retry}
           onDeleteRow={handleDeleteRow}
+          onUpdateRow={handleUpdateRow}
         />
       </main>
     </div>
