@@ -43,6 +43,22 @@ export function LeagueFilter({ selectedValues, onToggle }: LeagueFilterProps): R
           className="w-full rounded-md border border-surface-600 bg-surface-800 px-3 py-1.5 text-sm text-surface-100 placeholder-surface-500 focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40 transition-colors"
         />
 
+        {!isOpen && selectedValues.length > 0 && (
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {selectedValues.map((value) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => onToggle(value)}
+                aria-pressed={true}
+                className="rounded-md px-2.5 py-1 text-xs font-medium transition-colors bg-primary-600 text-white hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
+              >
+                {value}
+              </button>
+            ))}
+          </div>
+        )}
+
         {isOpen && (
           <div className="absolute z-50 mt-1 w-full rounded-md border border-surface-600 bg-surface-800 p-2 shadow-lg">
             {isLoading ? (
