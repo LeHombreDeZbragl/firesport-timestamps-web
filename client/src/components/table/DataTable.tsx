@@ -18,7 +18,6 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrash, faPencil, faFloppyDisk, faXmark } from '@fortawesome/free-solid-svg-icons';
 import {
   COLUMN_DEFINITIONS,
-  NON_EDITABLE_FIELDS,
   NULLABLE_NUMERIC_FIELDS,
   EDITABLE_FIELD_INPUT_TYPE,
   EDITABLE_COLUMN_KEYS,
