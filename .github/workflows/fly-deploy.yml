@@ -1,0 +1,24 @@
+name: Deploy to fly.io
+
+on:
+  push:
+    branches:
+      - main          # auto-deploy on every push to main
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    # Prevent two deploys from racing if pushes happen in quick succession
+    concurrency: deploy-group
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      # --remote-only  →  the Docker build runs on fly.io's remote builders,
+      # not on the GitHub Actions runner. Faster and no Docker-in-Docker needed.
+      - run: fly deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

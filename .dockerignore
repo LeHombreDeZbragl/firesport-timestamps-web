@@ -1,0 +1,30 @@
+# Dependencies — never copy these; npm ci installs fresh in the container
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Build outputs — rebuilt inside Docker
+server/dist/
+client/dist/
+
+# Environment files — secrets are injected by fly.io at runtime
+.env
+.env.*
+!.env.example
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Editor / OS artefacts
+.vscode/
+.idea/
+*.DS_Store
+
+# Project-specific non-source dirs
+image/
+
+# Docs / planning (not needed in image)
+README.md
+TODO.md
