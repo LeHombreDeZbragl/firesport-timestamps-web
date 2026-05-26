@@ -14,6 +14,7 @@ import {
 import {
   type TimestampsResponse,
   type StatsResponse,
+  type GraphStatsResponse,
   type DistinctValuesResponse,
   type DistinctYearsResponse,
   type LeaguePairsResponse,
@@ -91,21 +92,79 @@ router.get('/stats', async (req: Request, res: Response): Promise<void> => {
     res.json({
       averageTime: null, bestTime: null, medianTime: null,
       lpFasterCount: 0, ppFasterCount: 0, equalCount: 0, totalCount: 0,
+      successfulCount: 0, unsuccessfulCount: 0,
     });
     return;
   }
 
   const stats: StatsResponse = {
-    averageTime:   row.average_time   ?? null,
-    bestTime:      row.best_time      ?? null,
-    medianTime:    row.median_time    ?? null,
-    lpFasterCount: Number(row.lp_faster   ?? 0),
-    ppFasterCount: Number(row.pp_faster   ?? 0),
-    equalCount:    Number(row.equal_count ?? 0),
-    totalCount:    Number(row.total_count ?? 0),
+    averageTime:       row.average_time       ?? null,
+    bestTime:          row.best_time          ?? null,
+    medianTime:        row.median_time        ?? null,
+    lpFasterCount:     Number(row.lp_faster        ?? 0),
+    ppFasterCount:     Number(row.pp_faster        ?? 0),
+    equalCount:        Number(row.equal_count       ?? 0),
+    totalCount:        Number(row.total_count       ?? 0),
+    successfulCount:   Number(row.successful_count  ?? 0),
+    unsuccessfulCount: Number(row.unsuccessful_count ?? 0),
   };
 
   res.json(stats);
+});
+
+// ─── GET /api/timestamps/graph-stats ─────────────────────────────────────────
+//
+// Returns chart data: time-bucket distribution + 20-point chronological
+// progression series (avg & min per NTILE group).
+// Accepts the same filter query params as /stats.
+//
+router.get('/graph-stats', async (req: Request, res: Response): Promise<void> => {
+  const filters = parseFilters(req.query);
+
+  const { data, error } = await supabase.rpc('get_timestamps_graph_stats', {
+    p_team:        filters.team.length        > 0 ? filters.team        : null,
+    p_category:    filters.category.length    > 0 ? filters.category    : null,
+    p_year:        filters.year.length        > 0 ? filters.year        : null,
+    p_league:      filters.league.length      > 0 ? filters.league      : null,
+    p_place:       filters.place.length       > 0 ? filters.place       : null,
+    p_attack_type: filters.attackType.length  > 0 ? filters.attackType  : null,
+  });
+
+  if (error) {
+    console.error('[GET /api/timestamps/graph-stats] Supabase RPC error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch graph stats.' });
+    return;
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) {
+    res.json({
+      distUnder16: 0, dist16To17: 0, dist17To18: 0, distOver18: 0,
+      distUnsuccessful: 0, progression: [],
+    });
+    return;
+  }
+
+  type RawProgression = { group: number; avg_time: number; min_time: number; start_date: string; end_date: string };
+
+  const graphStats: GraphStatsResponse = {
+    distUnder16:      Number(row.dist_under_16     ?? 0),
+    dist16To17:       Number(row.dist_16_to_17     ?? 0),
+    dist17To18:       Number(row.dist_17_to_18     ?? 0),
+    distOver18:       Number(row.dist_over_18      ?? 0),
+    distUnsuccessful: Number(row.dist_unsuccessful ?? 0),
+    progression: Array.isArray(row.progression)
+      ? (row.progression as RawProgression[]).map((p) => ({
+          group:     p.group,
+          avgTime:   p.avg_time,
+          minTime:   p.min_time,
+          startDate: p.start_date,
+          endDate:   p.end_date,
+        }))
+      : [],
+  };
+
+  res.json(graphStats);
 });
 
 // ─── GET /api/timestamps/distinct/years ────────────────────────────────────────

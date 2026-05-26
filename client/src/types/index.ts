@@ -129,6 +129,27 @@ export interface Stats {
   ppFasterCount: number;
   equalCount: number;
   totalCount: number;
+  successfulCount: number;
+  unsuccessfulCount: number;
+}
+
+/** One point in the 20-group chronological progression series. */
+export interface ProgressionPoint {
+  group: number;
+  avgTime: number;
+  minTime: number;
+  startDate: string;  // "YYYY-MM-DD"
+  endDate: string;    // "YYYY-MM-DD"
+}
+
+/** Chart data: time-bucket distribution + chronological progression. */
+export interface GraphStats {
+  distUnder16: number;
+  dist16To17: number;
+  dist17To18: number;
+  distOver18: number;
+  distUnsuccessful: number;
+  progression: ProgressionPoint[];
 }
 
 // ─── API response shapes ───────────────────────────────────────────────────────

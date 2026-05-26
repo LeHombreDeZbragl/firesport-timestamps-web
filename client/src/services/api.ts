@@ -5,6 +5,7 @@ import type {
   SortConfig,
   TimestampsApiResponse,
   Stats,
+  GraphStats,
   DistinctValuesApiResponse,
   DistinctYearsApiResponse,
   LeaguePairsApiResponse,
@@ -125,6 +126,19 @@ export async function fetchLeaguePairs(): Promise<LeaguePairsApiResponse['pairs'
   );
 
   return response.data.pairs;
+}
+
+/**
+ * Fetches chart data: time-bucket distribution + 20-point progression series.
+ */
+export async function fetchGraphStats(filters: Filters): Promise<GraphStats> {
+  const params = filtersToParams(filters);
+
+  const response: AxiosResponse<GraphStats> = await apiClient.get('/timestamps/graph-stats', {
+    params,
+  });
+
+  return response.data;
 }
 
 /**

@@ -4,15 +4,19 @@
 -- Accepts array parameters; NULL means "no filter for this dimension".
 --
 -- Returns a single row with the following columns:
---   average_time  float4  - arithmetic mean of final_time
---   best_time     float4  - minimum final_time
---   median_time   float8  - 50th percentile of final_time
---   lp_faster     int8    - rows where lp < pp (LP side was faster)
---   pp_faster     int8    - rows where pp < lp (PP side was faster)
---   equal_count   int8    - rows where lp = pp (both present, same time)
---   total_count   int8    - all rows matching the filter (incl. nulls)
+--   average_time       float4  - arithmetic mean of final_time
+--   best_time          float4  - minimum final_time
+--   median_time        float8  - 50th percentile of final_time
+--   lp_faster          int8    - rows where lp < pp (LP side was faster)
+--   pp_faster          int8    - rows where pp < lp (PP side was faster)
+--   equal_count        int8    - rows where lp = pp (both present, same time)
+--   total_count        int8    - all rows matching the filter (incl. nulls)
+--   successful_count   int8    - rows where final_time IS NOT NULL
+--   unsuccessful_count int8    - rows where final_time IS NULL
 --
 -- Run once in the Supabase SQL editor; re-run to replace on changes.
+
+DROP FUNCTION IF EXISTS get_timestamps_stats(text[],text[],integer[],text[],text[],text[]);
 
 CREATE OR REPLACE FUNCTION get_timestamps_stats(
   p_team        text[]    DEFAULT NULL,
@@ -23,13 +27,15 @@ CREATE OR REPLACE FUNCTION get_timestamps_stats(
   p_attack_type text[]    DEFAULT NULL
 )
 RETURNS TABLE (
-  average_time  float4,
-  best_time     float4,
-  median_time   float8,
-  lp_faster     bigint,
-  pp_faster     bigint,
-  equal_count   bigint,
-  total_count   bigint
+  average_time       float4,
+  best_time          float4,
+  median_time        float8,
+  lp_faster          bigint,
+  pp_faster          bigint,
+  equal_count        bigint,
+  total_count        bigint,
+  successful_count   bigint,
+  unsuccessful_count bigint
 )
 LANGUAGE sql
 STABLE
@@ -41,7 +47,9 @@ AS $$
     COUNT(*) FILTER (WHERE lp IS NOT NULL AND pp IS NOT NULL AND lp < pp) AS lp_faster,
     COUNT(*) FILTER (WHERE lp IS NOT NULL AND pp IS NOT NULL AND pp < lp) AS pp_faster,
     COUNT(*) FILTER (WHERE lp IS NOT NULL AND pp IS NOT NULL AND lp = pp) AS equal_count,
-    COUNT(*)                                                               AS total_count
+    COUNT(*)                                                               AS total_count,
+    COUNT(*) FILTER (WHERE final_time IS NOT NULL)                        AS successful_count,
+    COUNT(*) FILTER (WHERE final_time IS NULL)                            AS unsuccessful_count
   FROM timestamps
   WHERE
     (p_team        IS NULL OR team        = ANY(p_team))

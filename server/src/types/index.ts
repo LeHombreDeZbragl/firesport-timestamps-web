@@ -95,6 +95,25 @@ export interface StatsResponse {
   ppFasterCount: number;
   equalCount: number;
   totalCount: number;
+  successfulCount: number;
+  unsuccessfulCount: number;
+}
+
+export interface ProgressionPoint {
+  group: number;
+  avgTime: number;
+  minTime: number;
+  startDate: string;
+  endDate: string;
+}
+
+export interface GraphStatsResponse {
+  distUnder16: number;
+  dist16To17: number;
+  dist17To18: number;
+  distOver18: number;
+  distUnsuccessful: number;
+  progression: ProgressionPoint[];
 }
 
 export interface DistinctValuesResponse {
