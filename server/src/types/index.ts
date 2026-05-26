@@ -97,6 +97,8 @@ export interface StatsResponse {
   totalCount: number;
   successfulCount: number;
   unsuccessfulCount: number;
+  avgLp: number | null;
+  avgPp: number | null;
 }
 
 export interface ProgressionPoint {
@@ -105,6 +107,8 @@ export interface ProgressionPoint {
   minTime: number;
   startDate: string;
   endDate: string;
+  avgLp: number | null;
+  avgPp: number | null;
 }
 
 export interface GraphStatsResponse {

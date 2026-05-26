@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useUrlState } from './hooks/useUrlState';
 import { useTimestamps } from './hooks/useTimestamps';
 import { useStats } from './hooks/useStats';
+import { useGraphStats } from './hooks/useGraphStats';
 import { FilterBar } from './components/filters/FilterBar';
 import { StatsPanel } from './components/stats/StatsPanel';
 import { DataTable } from './components/table/DataTable';
@@ -32,6 +33,7 @@ function App(): React.JSX.Element {
   } = useTimestamps(filters, sort);
 
   const { stats, isLoading: statsLoading } = useStats(filters);
+  const { graphStats, isLoading: graphStatsLoading } = useGraphStats(filters);
 
   const handleSortChange = useCallback(
     (newSort: SortConfig | null) => {
@@ -101,7 +103,7 @@ function App(): React.JSX.Element {
         </div>
 
         {/* Stats */}
-        <StatsPanel stats={stats} isLoading={statsLoading} />
+        <StatsPanel stats={stats} isLoading={statsLoading} graphStats={graphStats} graphStatsLoading={graphStatsLoading} />
 
         {/* Data table */}
         <DataTable

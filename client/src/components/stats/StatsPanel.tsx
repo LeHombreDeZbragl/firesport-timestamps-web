@@ -1,4 +1,6 @@
-import type { Stats } from '../../types';
+import type { Stats, GraphStats } from '../../types';
+import { AttackDistributionChart } from './AttackDistributionChart';
+import { TimeProgressionChart } from './TimeProgressionChart';
 
 interface StatCardProps {
   label: string;
@@ -19,6 +21,20 @@ function StatCard({ label, value, isLoading }: StatCardProps): React.JSX.Element
   );
 }
 
+interface ChartCardProps {
+  label: string;
+  children: React.ReactNode;
+}
+
+function ChartCard({ label, children }: ChartCardProps): React.JSX.Element {
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border border-surface-700 bg-surface-800 px-4 py-3">
+      <dt className="text-xs font-semibold uppercase tracking-wide text-surface-400">{label}</dt>
+      <dd>{children}</dd>
+    </div>
+  );
+}
+
 function formatTime(value: number | null): string {
   if (value === null) return '—';
   return `${value.toFixed(2)} s`;
@@ -32,23 +48,35 @@ function formatRatio(lpFaster: number, ppFaster: number, _equal: number): string
   return `LP ${lpPct}% / PP ${ppPct}%`;
 }
 
+function formatProstrik(avgLp: number | null, avgPp: number | null): string {
+  if (avgLp === null || avgPp === null) return '—';
+  const diff = avgLp - avgPp;
+  if (Math.abs(diff) < 0.005) return '—';
+  return diff > 0
+    ? `LP +${diff.toFixed(2)} s`
+    : `PP +${(-diff).toFixed(2)} s`;
+}
+
+function formatSuccessRatio(successful: number, unsuccessful: number): string {
+  const total = successful + unsuccessful;
+  if (total === 0) return '—';
+  return `${successful.toLocaleString()} / ${unsuccessful.toLocaleString()}`;
+}
+
 interface StatsPanelProps {
   stats: Stats | null;
   isLoading: boolean;
+  graphStats: GraphStats | null;
+  graphStatsLoading: boolean;
 }
 
-export function StatsPanel({ stats, isLoading }: StatsPanelProps): React.JSX.Element {
+export function StatsPanel({ stats, isLoading, graphStats, graphStatsLoading }: StatsPanelProps): React.JSX.Element {
   return (
     <section aria-label="Statistics">
-      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-7">
         <StatCard
           label="Celkem útoků"
           value={stats ? stats.totalCount.toLocaleString() : '—'}
-          isLoading={isLoading}
-        />
-        <StatCard
-          label="Průměrný čas"
-          value={formatTime(stats?.averageTime ?? null)}
           isLoading={isLoading}
         />
         <StatCard
@@ -57,20 +85,56 @@ export function StatsPanel({ stats, isLoading }: StatsPanelProps): React.JSX.Ele
           isLoading={isLoading}
         />
         <StatCard
-          label="Medián času"
+          label="Průměrný čas"
+          value={formatTime(stats?.averageTime ?? null)}
+          isLoading={isLoading}
+        />
+        <StatCard
+          label="Medián časů"
           value={formatTime(stats?.medianTime ?? null)}
           isLoading={isLoading}
         />
-        <div className="col-span-2 xl:col-span-1">
-          <StatCard
-            label="Poměr rychlejšího LP / PP"
-            value={
-              stats
-                ? formatRatio(stats.lpFasterCount, stats.ppFasterCount, stats.equalCount)
-                : '—'
-            }
-            isLoading={isLoading}
-          />
+        <StatCard
+          label="Poměr LP / PP"
+          value={
+            stats
+              ? formatRatio(stats.lpFasterCount, stats.ppFasterCount, stats.equalCount)
+              : '—'
+          }
+          isLoading={isLoading}
+        />
+        <StatCard
+          label="Průměrný prostřik"
+          value={stats ? formatProstrik(stats.avgLp, stats.avgPp) : '—'}
+          isLoading={isLoading}
+        />
+        <StatCard
+          label="Povedené / Nepovedené"
+          value={
+            stats
+              ? formatSuccessRatio(stats.successfulCount, stats.unsuccessfulCount)
+              : '—'
+          }
+          isLoading={isLoading}
+        />
+        <div className="col-span-2 sm:col-span-2 xl:col-span-2">
+          <ChartCard label="Rozložení časů">
+            <AttackDistributionChart
+              graphStats={graphStats ?? {
+                distUnder16: 0, dist16To17: 0, dist17To18: 0,
+                distOver18: 0, distUnsuccessful: 0, progression: [],
+              }}
+              isLoading={graphStatsLoading}
+            />
+          </ChartCard>
+        </div>
+        <div className="col-span-2 sm:col-span-2 xl:col-span-5">
+          <ChartCard label="Vývoj časů">
+            <TimeProgressionChart
+              progression={graphStats?.progression ?? []}
+              isLoading={graphStatsLoading}
+            />
+          </ChartCard>
         </div>
       </dl>
     </section>

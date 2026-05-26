@@ -131,6 +131,8 @@ export interface Stats {
   totalCount: number;
   successfulCount: number;
   unsuccessfulCount: number;
+  avgLp: number | null;
+  avgPp: number | null;
 }
 
 /** One point in the 20-group chronological progression series. */
@@ -140,6 +142,8 @@ export interface ProgressionPoint {
   minTime: number;
   startDate: string;  // "YYYY-MM-DD"
   endDate: string;    // "YYYY-MM-DD"
+  avgLp: number | null;
+  avgPp: number | null;
 }
 
 /** Chart data: time-bucket distribution + chronological progression. */

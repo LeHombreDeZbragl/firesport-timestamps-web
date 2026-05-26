@@ -93,6 +93,7 @@ router.get('/stats', async (req: Request, res: Response): Promise<void> => {
       averageTime: null, bestTime: null, medianTime: null,
       lpFasterCount: 0, ppFasterCount: 0, equalCount: 0, totalCount: 0,
       successfulCount: 0, unsuccessfulCount: 0,
+      avgLp: null, avgPp: null,
     });
     return;
   }
@@ -107,6 +108,8 @@ router.get('/stats', async (req: Request, res: Response): Promise<void> => {
     totalCount:        Number(row.total_count       ?? 0),
     successfulCount:   Number(row.successful_count  ?? 0),
     unsuccessfulCount: Number(row.unsuccessful_count ?? 0),
+    avgLp:             row.avg_lp ?? null,
+    avgPp:             row.avg_pp ?? null,
   };
 
   res.json(stats);
@@ -145,7 +148,7 @@ router.get('/graph-stats', async (req: Request, res: Response): Promise<void> =>
     return;
   }
 
-  type RawProgression = { group: number; avg_time: number; min_time: number; start_date: string; end_date: string };
+  type RawProgression = { group: number; avg_time: number; min_time: number; start_date: string; end_date: string; avg_lp: number | null; avg_pp: number | null };
 
   const graphStats: GraphStatsResponse = {
     distUnder16:      Number(row.dist_under_16     ?? 0),
@@ -160,6 +163,8 @@ router.get('/graph-stats', async (req: Request, res: Response): Promise<void> =>
           minTime:   p.min_time,
           startDate: p.start_date,
           endDate:   p.end_date,
+          avgLp:     p.avg_lp ?? null,
+          avgPp:     p.avg_pp ?? null,
         }))
       : [],
   };

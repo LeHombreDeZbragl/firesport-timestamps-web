@@ -13,6 +13,8 @@
 --   total_count        int8    - all rows matching the filter (incl. nulls)
 --   successful_count   int8    - rows where final_time IS NOT NULL
 --   unsuccessful_count int8    - rows where final_time IS NULL
+--   avg_lp             float4  - avg lp time on rows where both lp and pp are not null
+--   avg_pp             float4  - avg pp time on rows where both lp and pp are not null
 --
 -- Run once in the Supabase SQL editor; re-run to replace on changes.
 
@@ -35,7 +37,9 @@ RETURNS TABLE (
   equal_count        bigint,
   total_count        bigint,
   successful_count   bigint,
-  unsuccessful_count bigint
+  unsuccessful_count bigint,
+  avg_lp             float4,
+  avg_pp             float4
 )
 LANGUAGE sql
 STABLE
@@ -49,7 +53,9 @@ AS $$
     COUNT(*) FILTER (WHERE lp IS NOT NULL AND pp IS NOT NULL AND lp = pp) AS equal_count,
     COUNT(*)                                                               AS total_count,
     COUNT(*) FILTER (WHERE final_time IS NOT NULL)                        AS successful_count,
-    COUNT(*) FILTER (WHERE final_time IS NULL)                            AS unsuccessful_count
+    COUNT(*) FILTER (WHERE final_time IS NULL)                            AS unsuccessful_count,
+    AVG(lp) FILTER (WHERE lp IS NOT NULL AND pp IS NOT NULL)::float4      AS avg_lp,
+    AVG(pp) FILTER (WHERE lp IS NOT NULL AND pp IS NOT NULL)::float4      AS avg_pp
   FROM timestamps
   WHERE
     (p_team        IS NULL OR team        = ANY(p_team))

@@ -10,7 +10,7 @@
 --   dist_over_18      bigint  - successful attacks with final_time ≥ 18 s
 --   dist_unsuccessful bigint  - attacks where final_time IS NULL
 --   progression       json    - array of 20 chronological NTILE groups, each:
---                               { group, avg_time, min_time, start_date, end_date }
+--                               { group, avg_time, min_time, start_date, end_date, avg_lp, avg_pp }
 --                               Only rows where final_time IS NOT NULL are used.
 --
 -- Run once in the Supabase SQL editor; re-run to replace on changes.
@@ -35,7 +35,7 @@ LANGUAGE sql
 STABLE
 AS $$
   WITH base AS (
-    SELECT id, attack_date, final_time
+    SELECT id, attack_date, final_time, lp, pp
     FROM timestamps
     WHERE
       (p_team        IS NULL OR team        = ANY(p_team))
@@ -57,6 +57,8 @@ AS $$
     SELECT
       attack_date,
       final_time,
+      lp,
+      pp,
       NTILE(20) OVER (ORDER BY attack_date, id) AS grp
     FROM base
     WHERE final_time IS NOT NULL
@@ -67,7 +69,9 @@ AS $$
       ROUND(AVG(final_time)::numeric, 2)::float8   AS avg_time,
       ROUND(MIN(final_time)::numeric, 2)::float8   AS min_time,
       MIN(attack_date)::text                       AS start_date,
-      MAX(attack_date)::text                       AS end_date
+      MAX(attack_date)::text                       AS end_date,
+      ROUND(AVG(lp)::numeric, 2)::float4           AS avg_lp,
+      ROUND(AVG(pp)::numeric, 2)::float4           AS avg_pp
     FROM with_tiles
     GROUP BY grp
   )

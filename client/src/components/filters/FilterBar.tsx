@@ -87,7 +87,7 @@ export function FilterBar({
             <button
               type="button"
               onClick={onClearAll}
-              className="rounded-md border border-surface-500 bg-surface-700 px-4 py-1.5 text-sm font-semibold text-surface-200 hover:border-primary-400 hover:bg-surface-600 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 transition-colors"
+              className="rounded-md border border-surface-500 bg-surface-700 px-4 py-1.5 text-sm font-semibold text-surface-200 hover:border-red-400 hover:bg-surface-600 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 transition-colors"
             >
               Vymazat všechny filtry
             </button>
