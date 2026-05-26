@@ -10,7 +10,7 @@ interface StatCardProps {
 
 function StatCard({ label, value, isLoading }: StatCardProps): React.JSX.Element {
   return (
-    <div className="flex flex-col gap-1 rounded-lg border border-surface-700 bg-surface-800 px-4 py-3">
+    <div className="h-full flex flex-col gap-1 rounded-lg border border-surface-700 bg-surface-800 px-4 py-3">
       <dt className="text-xs font-semibold uppercase tracking-wide text-surface-400">{label}</dt>
       {isLoading ? (
         <dd className="h-7 w-20 animate-pulse rounded bg-surface-700" aria-hidden="true" />
@@ -73,7 +73,7 @@ interface StatsPanelProps {
 export function StatsPanel({ stats, isLoading, graphStats, graphStatsLoading }: StatsPanelProps): React.JSX.Element {
   return (
     <section aria-label="Statistics">
-      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-7">
+      <dl className="grid grid-cols-3 gap-3 lg:grid-cols-5 xl:grid-cols-7">
         <StatCard
           label="Celkem útoků"
           value={stats ? stats.totalCount.toLocaleString() : '—'}
@@ -94,30 +94,36 @@ export function StatsPanel({ stats, isLoading, graphStats, graphStatsLoading }: 
           value={formatTime(stats?.medianTime ?? null)}
           isLoading={isLoading}
         />
-        <StatCard
-          label="Poměr LP / PP"
-          value={
-            stats
-              ? formatRatio(stats.lpFasterCount, stats.ppFasterCount, stats.equalCount)
-              : '—'
-          }
-          isLoading={isLoading}
-        />
-        <StatCard
-          label="Průměrný prostřik"
-          value={stats ? formatProstrik(stats.avgLp, stats.avgPp) : '—'}
-          isLoading={isLoading}
-        />
-        <StatCard
-          label="Povedené / Nepovedené"
-          value={
-            stats
-              ? formatSuccessRatio(stats.successfulCount, stats.unsuccessfulCount)
-              : '—'
-          }
-          isLoading={isLoading}
-        />
-        <div className="col-span-2 sm:col-span-2 xl:col-span-2">
+        <div className="col-span-2 order-5 md:col-span-1 md:order-6 lg:order-5">
+          <StatCard
+            label="Průměrný prostřik"
+            value={stats ? formatProstrik(stats.avgLp, stats.avgPp) : '—'}
+            isLoading={isLoading}
+          />    
+        </div>
+        <div className="order-6 col-span-3 md:col-span-2 md:order-5 lg:order-6 xl:col-span-1">
+          <StatCard
+            label="Poměr LP / PP"
+            value={
+              stats
+                ? formatRatio(stats.lpFasterCount, stats.ppFasterCount, stats.equalCount)
+                : '—'
+            }
+            isLoading={isLoading}
+          />
+        </div>    
+        <div className="col-span-3 order-6 md:col-span-2 md:order-7 lg:order-8 xl:col-span-1 xl:order-7">
+          <StatCard
+            label="Povedené / Nepovedené"
+            value={
+              stats
+                ? formatSuccessRatio(stats.successfulCount, stats.unsuccessfulCount)
+                : '—'
+            }
+            isLoading={isLoading}
+          />
+        </div>
+        <div className="order-7 col-span-3 md:row-span-2 lg:row-span-2 xl:col-span-2">
           <ChartCard label="Rozložení časů">
             <AttackDistributionChart
               graphStats={graphStats ?? {
@@ -128,7 +134,7 @@ export function StatsPanel({ stats, isLoading, graphStats, graphStatsLoading }: 
             />
           </ChartCard>
         </div>
-        <div className="col-span-2 sm:col-span-2 xl:col-span-5">
+        <div className="order-8 col-span-3 md:col-span-3 lg:col-span-5">
           <ChartCard label="Vývoj časů">
             <TimeProgressionChart
               progression={graphStats?.progression ?? []}
