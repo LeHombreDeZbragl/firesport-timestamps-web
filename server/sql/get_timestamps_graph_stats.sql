@@ -9,7 +9,7 @@
 --   dist_17_to_18     bigint  - successful attacks 17 s ≤ time < 18 s
 --   dist_over_18      bigint  - successful attacks with final_time ≥ 18 s
 --   dist_unsuccessful bigint  - attacks where final_time IS NULL
---   progression       json    - array of 20 chronological NTILE groups, each:
+--   progression       json    - array of 30 chronological NTILE groups, each:
 --                               { group, avg_time, min_time, start_date, end_date, avg_lp, avg_pp }
 --                               Only rows where final_time IS NOT NULL are used.
 --
@@ -59,7 +59,7 @@ AS $$
       final_time,
       lp,
       pp,
-      NTILE(20) OVER (ORDER BY attack_date, id) AS grp
+      NTILE(30) OVER (ORDER BY attack_date, id) AS grp
     FROM base
     WHERE final_time IS NOT NULL
   ),

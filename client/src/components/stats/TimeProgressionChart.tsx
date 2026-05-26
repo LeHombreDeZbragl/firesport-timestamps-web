@@ -163,7 +163,8 @@ export function TimeProgressionChart({
     ? 'full'
     : detectFormat(progression[0].startDate, progression[progression.length - 1].endDate);
 
-  const xTicks = computeTicks(chartData.length, 10);
+  const maxTicks = axisDateFmt === 'full' ? 4 : 6;
+  const xTicks = computeTicks(chartData.length, maxTicks);
 
   return (
     <ResponsiveContainer width="100%" height={160}>
