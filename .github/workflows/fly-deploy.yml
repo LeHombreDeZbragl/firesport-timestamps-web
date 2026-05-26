@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - uses: superfly/flyctl-actions/setup-flyctl@v1.3
 
       # --remote-only  →  the Docker build runs on fly.io's remote builders,
       # not on the GitHub Actions runner. Faster and no Docker-in-Docker needed.
