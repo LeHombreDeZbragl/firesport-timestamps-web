@@ -85,13 +85,15 @@ export function SortableHeader({
       ref={setNodeRef}
       scope="col"
       style={thStyle}
-      className="select-none transition-colors hover:bg-surface-800/60"
+      onClick={handleSortClick}
+      className={`select-none transition-colors hover:bg-surface-800/60 ${sortable ? 'cursor-pointer' : ''}`}
     >
       <div className="flex items-center gap-0.5 px-1 py-2">
         {/* Drag handle — listeners go here so clicking the sort button does not activate drag */}
         <span
           {...attributes}
           {...listeners}
+          onClick={(e) => e.stopPropagation()}
           className="shrink-0 cursor-grab touch-none px-1 text-surface-600 hover:text-surface-400 active:cursor-grabbing"
           title="Přetáhněte pro změnu pořadí"
         >

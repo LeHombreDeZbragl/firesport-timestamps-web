@@ -28,7 +28,7 @@ export function ClickableCell({
           className="text-primary-400 hover:text-primary-300 underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 transition-colors"
           onClick={(e) => e.stopPropagation()}
         >
-          View
+          Zobrazit
         </a>
       </td>
     );
@@ -40,9 +40,9 @@ export function ClickableCell({
     const strValue = String(value);
     return (
       <td
-        className="cursor-pointer overflow-x-auto whitespace-nowrap px-3 py-2 text-sm text-surface-200 hover:bg-primary-900/30 hover:text-primary-300 transition-colors"
+        className="cursor-pointer overflow-x-auto whitespace-nowrap px-3 py-2 text-sm text-surface-200 hover:bg-primary-700/50 hover:text-primary-100 transition-colors"
         onClick={() => onAddFilter(filterKey, strValue)}
-        title={`Filter by ${columnDef.label}: ${strValue}`}
+        title={`Filtrovat podle ${columnDef.label}: ${strValue}`}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => {

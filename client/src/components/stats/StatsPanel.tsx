@@ -63,7 +63,7 @@ export function StatsPanel({ stats, isLoading }: StatsPanelProps): React.JSX.Ele
         />
         <div className="col-span-2 xl:col-span-1">
           <StatCard
-            label="Poměr rychlejšího LP : PP"
+            label="Poměr rychlejšího LP / PP"
             value={
               stats
                 ? formatRatio(stats.lpFasterCount, stats.ppFasterCount, stats.equalCount)

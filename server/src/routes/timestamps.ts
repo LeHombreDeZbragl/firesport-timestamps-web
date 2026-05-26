@@ -16,6 +16,7 @@ import {
   type StatsResponse,
   type DistinctValuesResponse,
   type DistinctYearsResponse,
+  type LeaguePairsResponse,
 } from '../types/index';
 
 const router = Router();
@@ -127,6 +128,28 @@ router.get('/distinct/years', async (_req: Request, res: Response): Promise<void
   // RPC returns an array of objects: [{ year: 2025 }, { year: 2024 }, ...]
   const years: number[] = (data as Array<{ year: number }>).map((row) => row.year);
   const response: DistinctYearsResponse = { years };
+  res.json(response);
+});
+
+// ─── GET /api/timestamps/distinct/league-pairs ─────────────────────────────────
+//
+// Returns distinct (league short code, full league name) pairs.
+// Used by the LeagueFilter for tooltips and long-name search.
+//
+router.get('/distinct/league-pairs', async (_req: Request, res: Response): Promise<void> => {
+  const { data, error } = await supabase.rpc('get_distinct_league_pairs');
+
+  if (error) {
+    console.error('[GET /api/timestamps/distinct/league-pairs] Supabase RPC error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch league pairs.' });
+    return;
+  }
+
+  const pairs = (data as Array<{ short_name: string; full_name: string }>).map((row) => ({
+    short: row.short_name,
+    full: row.full_name,
+  }));
+  const response: LeaguePairsResponse = { pairs };
   res.json(response);
 });
 

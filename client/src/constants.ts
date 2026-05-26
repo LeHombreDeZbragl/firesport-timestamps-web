@@ -204,7 +204,7 @@ export const COLUMN_DEFINITIONS: ColumnDefinition[] = [
   },
   {
     key: 'created_at',
-    label: 'Created At',
+    label: 'Vytvořeno',
     filterable: false,
     sortable: false,
     defaultVisible: false,
@@ -222,7 +222,7 @@ export const FILTER_LABELS: Record<keyof Filters, string> = {
   year: 'Rok',
   league: 'Liga',
   place: 'Místo',
-  attackType: 'Attack Type',
+  attackType: 'Typ útoku',
 };
 
 // ─── URL param ↔ filter key mapping ────────────────────────────────────────────
@@ -247,6 +247,25 @@ export const FILTER_KEY_TO_URL_PARAM: Record<keyof Filters, string> = {
   place: 'place',
   attackType: 'attack_type',
 };
+
+// ─── Category display order ────────────────────────────────────────────────────
+//
+// Explicit order for category buttons. Categories not in this list are appended
+// after the ordered ones, sorted alphabetically.
+
+export const CATEGORY_ORDER: readonly string[] = [
+  'Muži',
+  'Ženy',
+  'Muži>35',
+  'Dorostenci',
+  'Dorostenky',
+  'Smíšený dorost',
+  'Děti-starší',
+  'Děti-mladší',
+  'Junioři',
+  'Juniorky',
+  'PS-12',
+];
 
 // ─── Inline row editing ────────────────────────────────────────────────────────────
 //

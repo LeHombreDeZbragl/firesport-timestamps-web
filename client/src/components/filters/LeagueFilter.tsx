@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useDistinctValues } from '../../hooks/useDistinctValues';
+import { useLeaguePairs } from '../../hooks/useLeaguePairs';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 
 interface LeagueFilterProps {
@@ -11,7 +12,22 @@ export function LeagueFilter({ selectedValues, onToggle }: LeagueFilterProps): R
   const [search, setSearch] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const { values, isLoading } = useDistinctValues('league', search);
+  // All distinct league values from the server (filtered by search term)
+  const { values: serverValues, isLoading } = useDistinctValues('league', '');
+  // Pair map: short code → full name (fetched once)
+  const { pairs } = useLeaguePairs();
+  const pairMap = new Map(pairs.map((p) => [p.short, p.full]));
+
+  // Filter leagues by both short code and full name
+  const values = search.trim().length === 0
+    ? serverValues
+    : serverValues.filter((v) => {
+        const lc = search.toLowerCase();
+        return (
+          v.toLowerCase().includes(lc) ||
+          (pairMap.get(v) ?? '').toLowerCase().includes(lc)
+        );
+      });
 
   // Close when clicking outside
   useEffect(() => {
@@ -51,6 +67,7 @@ export function LeagueFilter({ selectedValues, onToggle }: LeagueFilterProps): R
                 type="button"
                 onClick={() => onToggle(value)}
                 aria-pressed={true}
+                title={pairMap.get(value) ?? value}
                 className="rounded-md px-2.5 py-1 text-xs font-medium transition-colors bg-primary-600 text-white hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
               >
                 {value}
@@ -69,7 +86,7 @@ export function LeagueFilter({ selectedValues, onToggle }: LeagueFilterProps): R
             ) : values.length === 0 ? (
               <p className="text-xs text-surface-500">Nebyly nalezeny žádné ligy</p>
             ) : (
-              <div className="flex max-h-48 flex-wrap gap-1.5 overflow-y-auto">
+              <div className="flex max-h-72 flex-wrap gap-1.5 overflow-y-auto">
                 {values.map((value) => {
                   const isSelected = selectedValues.includes(value);
                   return (
@@ -80,8 +97,10 @@ export function LeagueFilter({ selectedValues, onToggle }: LeagueFilterProps): R
                         // prevent input blur before click registers
                         e.preventDefault();
                         onToggle(value);
+                        setIsOpen(false);
                       }}
                       aria-pressed={isSelected}
+                      title={pairMap.get(value) ?? value}
                       className={`
                         rounded-md px-2.5 py-1 text-xs font-medium transition-colors
                         focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400

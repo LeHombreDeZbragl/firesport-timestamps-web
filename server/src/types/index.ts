@@ -105,6 +105,15 @@ export interface DistinctYearsResponse {
   years: number[];
 }
 
+export interface LeaguePair {
+  short: string;
+  full: string;
+}
+
+export interface LeaguePairsResponse {
+  pairs: LeaguePair[];
+}
+
 // ─── Filterable text columns ───────────────────────────────────────────────────
 
 /** Known columns for which distinct-value autocomplete is supported. */

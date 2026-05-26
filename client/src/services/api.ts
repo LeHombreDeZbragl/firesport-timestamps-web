@@ -7,6 +7,7 @@ import type {
   Stats,
   DistinctValuesApiResponse,
   DistinctYearsApiResponse,
+  LeaguePairsApiResponse,
   Timestamp,
   EditableTimestampFields,
 } from '../types/index';
@@ -112,6 +113,18 @@ export async function fetchDistinctYears(): Promise<number[]> {
   );
 
   return response.data.years;
+}
+
+/**
+ * Fetches all distinct (league short code, full league name) pairs.
+ * Backed by the Supabase RPC `get_distinct_league_pairs`.
+ */
+export async function fetchLeaguePairs(): Promise<LeaguePairsApiResponse['pairs']> {
+  const response: AxiosResponse<LeaguePairsApiResponse> = await apiClient.get(
+    '/timestamps/distinct/league-pairs'
+  );
+
+  return response.data.pairs;
 }
 
 /**

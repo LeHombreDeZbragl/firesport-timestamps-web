@@ -18,8 +18,9 @@ export function FilterBar({
   onClearAll,
 }: FilterBarProps): React.JSX.Element {
   return (
-    <section aria-label="Filters" className="flex flex-col gap-4">
+    <section aria-label="Filters">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {/* Row 1: Tým | Místo | Liga */}
         <AutocompleteFilter
           column="team"
           label="Tým"
@@ -44,15 +45,15 @@ export function FilterBar({
             }
           }}
         />
-        <ButtonGroupFilter
-          column="attack_type"
-          label="Typ útoku"
-          selectedValues={filters.attackType}
-          onToggle={(v) => {
-            if (filters.attackType.includes(v)) {
-              onRemoveFilter('attackType', v);
+
+        {/* Row 2: Rok | Kategorie | Typ útoku + Vymazat všechny filtry */}
+        <YearFilter
+          selectedYears={filters.year}
+          onToggle={(year) => {
+            if (filters.year.includes(year)) {
+              onRemoveFilter('year', String(year));
             } else {
-              onAddFilter('attackType', v);
+              onAddFilter('year', String(year));
             }
           }}
         />
@@ -68,26 +69,30 @@ export function FilterBar({
             }
           }}
         />
-        <YearFilter
-          selectedYears={filters.year}
-          onToggle={(year) => {
-            if (filters.year.includes(year)) {
-              onRemoveFilter('year', String(year));
-            } else {
-              onAddFilter('year', String(year));
-            }
-          }}
-        />
-      </div>
-
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={onClearAll}
-          className="rounded-md border border-surface-500 bg-surface-700 px-4 py-1.5 text-sm font-semibold text-surface-200 hover:border-primary-400 hover:bg-surface-600 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 transition-colors"
-        >
-          Vymazat všechny filtry
-        </button>
+        {/* Bottom-right cell: Typ útoku on top, clear button at bottom */}
+        <div className="flex flex-col justify-between gap-3">
+          <ButtonGroupFilter
+            column="attack_type"
+            label="Typ útoku"
+            selectedValues={filters.attackType}
+            onToggle={(v) => {
+              if (filters.attackType.includes(v)) {
+                onRemoveFilter('attackType', v);
+              } else {
+                onAddFilter('attackType', v);
+              }
+            }}
+          />
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={onClearAll}
+              className="rounded-md border border-surface-500 bg-surface-700 px-4 py-1.5 text-sm font-semibold text-surface-200 hover:border-primary-400 hover:bg-surface-600 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 transition-colors"
+            >
+              Vymazat všechny filtry
+            </button>
+          </div>
+        </div>
       </div>
     </section>
   );

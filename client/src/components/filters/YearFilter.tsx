@@ -18,10 +18,10 @@ export function YearFilter({ selectedYears, onToggle }: YearFilterProps): React.
       {isLoading ? (
         <div className="flex items-center gap-2 py-1">
           <LoadingSpinner size="sm" />
-          <span className="text-xs text-surface-500">Loading years…</span>
+          <span className="text-xs text-surface-500">Načítání roků…</span>
         </div>
       ) : years.length === 0 ? (
-        <p className="text-xs text-surface-500">No years available</p>
+        <p className="text-xs text-surface-500">Žádné roky</p>
       ) : (
         <div className="flex flex-wrap gap-1.5">
           {years.map((year) => {

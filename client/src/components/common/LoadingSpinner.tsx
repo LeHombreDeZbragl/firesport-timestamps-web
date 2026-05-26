@@ -12,7 +12,7 @@ export function LoadingSpinner({ size = 'md' }: LoadingSpinnerProps): React.JSX.
   return (
     <div
       role="status"
-      aria-label="Loading"
+      aria-label="Načítání"
       className={`
         animate-spin rounded-full
         border-surface-600 border-t-primary-400

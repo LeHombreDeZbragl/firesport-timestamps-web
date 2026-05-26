@@ -147,6 +147,15 @@ export interface DistinctYearsApiResponse {
   years: number[];
 }
 
+export interface LeaguePair {
+  short: string;
+  full: string;
+}
+
+export interface LeaguePairsApiResponse {
+  pairs: LeaguePair[];
+}
+
 // ─── URL-serialisable filter key ───────────────────────────────────────────────
 
 /**

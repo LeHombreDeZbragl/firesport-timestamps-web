@@ -26,7 +26,7 @@ export function ErrorMessage({ message, onRetry }: ErrorMessageProps): React.JSX
           onClick={onRetry}
           className="rounded-md bg-primary-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 transition-colors"
         >
-          Retry
+          Zkusit znovu
         </button>
       )}
     </div>

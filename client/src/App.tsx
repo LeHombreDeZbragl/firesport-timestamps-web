@@ -120,6 +120,19 @@ function App(): React.JSX.Element {
           onUpdateRow={handleUpdateRow}
         />
       </main>
+
+      {/* ── Footer ── */}
+      <footer className="shrink-0 border-t border-surface-800 bg-surface-900 px-6 py-4 text-center text-xs text-surface-500">
+        © Tomáš Buchta &mdash; Data z{' '}
+        <a
+          href="https://firesport.eu"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-surface-400 underline underline-offset-2 hover:text-surface-200 transition-colors"
+        >
+          firesport.eu
+        </a>
+      </footer>
     </div>
   );
 }

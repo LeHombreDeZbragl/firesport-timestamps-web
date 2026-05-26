@@ -460,7 +460,7 @@ export function DataTable({
                 Načítání…
               </>
             ) : (
-              `Načíst dalších 50 (${remaining.toLocaleString()} zbývá)`
+              `Načíst dalších 50 (Zbývá ${remaining.toLocaleString()})`
             )}
           </button>
         </div>
