@@ -68,10 +68,14 @@ export function computeStats(rows: LpPpRow[], totalCount: number): StatsResponse
   );
 
   const finalTimes = completeRows.map((row) => Math.max(row.lp, row.pp));
+  const lpValues = completeRows.map((row) => row.lp);
+  const ppValues = completeRows.map((row) => row.pp);
 
   const averageTime = computeAverage(finalTimes);
   const bestTime = computeMin(finalTimes);
   const medianTime = computeMedian(finalTimes);
+  const avgLp = computeAverage(lpValues);
+  const avgPp = computeAverage(ppValues);
 
   let lpFasterCount = 0;
   let ppFasterCount = 0;
@@ -87,6 +91,9 @@ export function computeStats(rows: LpPpRow[], totalCount: number): StatsResponse
     }
   }
 
+  const successfulCount = completeRows.length;
+  const unsuccessfulCount = totalCount - successfulCount;
+
   return {
     averageTime,
     bestTime,
@@ -95,5 +102,9 @@ export function computeStats(rows: LpPpRow[], totalCount: number): StatsResponse
     ppFasterCount,
     equalCount,
     totalCount,
+    successfulCount,
+    unsuccessfulCount,
+    avgLp,
+    avgPp,
   };
 }
