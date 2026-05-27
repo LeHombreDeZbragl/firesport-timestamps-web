@@ -112,9 +112,12 @@ function App(): React.JSX.Element {
     <div className="min-h-screen flex flex-col bg-surface-950 text-surface-100">
       {/* ── Header ── */}
       <header className="bg-surface-900 border-b border-surface-700 px-6 py-4 shrink-0">
-        <h1 className="text-xl font-bold tracking-tight text-white">
+        <a
+          href="https://firesport-timestamps-web.fly.dev/"
+          className="inline-block text-xl font-bold tracking-tight text-white hover:text-primary-300 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 rounded"
+        >
           Firesport Timestamps
-        </h1>
+        </a>
       </header>
 
       {/* ── Main content ── */}
