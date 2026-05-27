@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useUrlState } from './hooks/useUrlState';
 import { useTimestamps } from './hooks/useTimestamps';
 import { useStats } from './hooks/useStats';
@@ -6,9 +6,9 @@ import { useGraphStats } from './hooks/useGraphStats';
 import { FilterBar } from './components/filters/FilterBar';
 import { StatsPanel } from './components/stats/StatsPanel';
 import { DataTable } from './components/table/DataTable';
-import { DEFAULT_SORT } from './constants';
+import { DEFAULT_SORT, EMPTY_FILTERS } from './constants';
 import { deleteTimestamp, patchTimestamp } from './services/api';
-import type { FilterKey, SortConfig, EditableTimestampFields } from './types';
+import type { FilterKey, SortConfig, EditableTimestampFields, Filters } from './types';
 
 function App(): React.JSX.Element {
   const {
@@ -20,6 +20,14 @@ function App(): React.JSX.Element {
     clearAllFilters,
   } = useUrlState();
 
+  // `appliedFilters` is what actually drives API calls.
+  // It only updates when the user clicks "Vyhledat" or clears all filters.
+  // Initialise from URL so that shared/bookmarked links load data immediately.
+  const [appliedFilters, setAppliedFilters] = useState<Filters>(filters);
+
+  // True when the pending UI filters differ from what was last applied.
+  const filtersChanged = JSON.stringify(filters) !== JSON.stringify(appliedFilters);
+
   const {
     rows,
     totalCount,
@@ -30,10 +38,10 @@ function App(): React.JSX.Element {
     loadMore,
     retry,
     reload,
-  } = useTimestamps(filters, sort);
+  } = useTimestamps(appliedFilters, sort);
 
-  const { stats, isLoading: statsLoading } = useStats(filters);
-  const { graphStats, isLoading: graphStatsLoading } = useGraphStats(filters);
+  const { stats, isLoading: statsLoading } = useStats(appliedFilters);
+  const { graphStats, isLoading: graphStatsLoading } = useGraphStats(appliedFilters);
 
   const handleSortChange = useCallback(
     (newSort: SortConfig | null) => {
@@ -58,6 +66,23 @@ function App(): React.JSX.Element {
     },
     [removeFilterValue],
   );
+
+  // Apply pending filters to the API — bail out if nothing changed.
+  const handleSearch = useCallback(() => {
+    setAppliedFilters((prev) => {
+      if (JSON.stringify(prev) === JSON.stringify(filters)) return prev;
+      return filters;
+    });
+  }, [filters]);
+
+  // Clear all pending + applied filters, but only if there is something to clear.
+  const handleClearAll = useCallback(() => {
+    const hasPending = Object.values(filters).some((arr) => arr.length > 0);
+    const hasApplied = Object.values(appliedFilters).some((arr) => arr.length > 0);
+    if (!hasPending && !hasApplied) return;
+    clearAllFilters();
+    setAppliedFilters(EMPTY_FILTERS);
+  }, [filters, appliedFilters, clearAllFilters]);
 
   const handleDeleteRow = useCallback(
     (id: number) => {
@@ -98,7 +123,9 @@ function App(): React.JSX.Element {
             filters={filters}
             onAddFilter={handleAddFilter}
             onRemoveFilter={handleRemoveFilter}
-            onClearAll={clearAllFilters}
+            onClearAll={handleClearAll}
+            onSearch={handleSearch}
+            filtersChanged={filtersChanged}
           />
         </div>
 
