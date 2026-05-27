@@ -4,13 +4,16 @@ interface ClickableCellProps {
   columnDef: ColumnDefinition;
   value: Timestamp[keyof Timestamp];
   onAddFilter: (filterKey: FilterKey, value: string) => void;
+  strikethrough?: boolean;
 }
 
 export function ClickableCell({
   columnDef,
   value,
   onAddFilter,
+  strikethrough = false,
 }: ClickableCellProps): React.JSX.Element {
+  const strikethroughClass = strikethrough ? ' line-through' : '';
   const displayValue = columnDef.format
     ? columnDef.format(value)
     : value !== null && value !== undefined
@@ -20,7 +23,7 @@ export function ClickableCell({
   // Special rendering: link column
   if (columnDef.key === 'link' && typeof value === 'string' && value.length > 0) {
     return (
-      <td className="overflow-x-auto whitespace-nowrap px-3 py-2">
+      <td className={`overflow-x-auto whitespace-nowrap px-3 py-2${strikethroughClass}`}>
         <a
           href={value}
           target="_blank"
@@ -40,7 +43,7 @@ export function ClickableCell({
     const strValue = String(value);
     return (
       <td
-        className="cursor-pointer overflow-x-auto whitespace-nowrap px-3 py-2 text-sm text-surface-200 hover:bg-primary-700/50 hover:text-primary-100 transition-colors"
+        className={`cursor-pointer overflow-x-auto whitespace-nowrap px-3 py-2 text-sm text-surface-200 hover:bg-primary-700/50 hover:text-primary-100 transition-colors${strikethroughClass}`}
         onClick={() => onAddFilter(filterKey, strValue)}
         title={`Filtrovat podle ${columnDef.label}: ${strValue}`}
         role="button"
@@ -59,7 +62,7 @@ export function ClickableCell({
 
   // Non-filterable column
   return (
-    <td className="overflow-x-auto whitespace-nowrap px-3 py-2 text-sm text-surface-200">
+    <td className={`overflow-x-auto whitespace-nowrap px-3 py-2 text-sm text-surface-200${strikethroughClass}`}>
       {displayValue === '' ? '—' : displayValue}
     </td>
   );

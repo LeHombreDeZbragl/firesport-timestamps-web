@@ -11,6 +11,8 @@ import type {
   LeaguePairsApiResponse,
   Timestamp,
   EditableTimestampFields,
+  BatchSavePayload,
+  BatchSaveOutcome,
 } from '../types/index';
 
 // ─── Axios instance ─────────────────────────────────────────────────────────────
@@ -159,4 +161,24 @@ export async function patchTimestamp(
 ): Promise<Timestamp> {
   const response: AxiosResponse<Timestamp> = await apiClient.patch(`/timestamps/${id}`, fields);
   return response.data;
+}
+
+/**
+ * Atomically saves a batch of changes: updates to existing rows, new inserts,
+ * and staged deletes. Returns a BatchSaveOutcome indicating success or
+ * per-field validation errors from the server.
+ */
+export async function batchSave(payload: BatchSavePayload): Promise<BatchSaveOutcome> {
+  try {
+    await apiClient.post('/timestamps/batch', payload);
+    return { success: true };
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response?.status === 400) {
+      const data = err.response.data as { errors?: { rowRef: string; field: string; message: string }[]; error?: string };
+      if (Array.isArray(data.errors)) {
+        return { success: false, errors: data.errors };
+      }
+    }
+    throw err;
+  }
 }

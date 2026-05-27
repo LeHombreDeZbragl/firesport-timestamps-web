@@ -202,3 +202,28 @@ export type FilterUrlParam =
  * `id` and `created_at` are immutable; `final_time` is computed by the DB.
  */
 export type EditableTimestampFields = Omit<Timestamp, 'id' | 'created_at' | 'final_time'>;
+
+// ─── Batch save ────────────────────────────────────────────────────────────────
+
+export interface BatchUpdateItem {
+  id: number;
+  fields: Partial<EditableTimestampFields>;
+}
+
+export interface BatchSavePayload {
+  updates: BatchUpdateItem[];
+  inserts: EditableTimestampFields[];
+  deletes: number[];
+}
+
+export interface BatchValidationError {
+  /** e.g. "update:1234", "insert:0" */
+  rowRef: string;
+  field: string;
+  message: string;
+}
+
+/** Return value of the onSave callback passed to DataTable. */
+export type BatchSaveOutcome =
+  | { success: true }
+  | { success: false; errors: BatchValidationError[] };

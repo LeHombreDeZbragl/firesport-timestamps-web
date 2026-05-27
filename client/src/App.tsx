@@ -3,12 +3,13 @@ import { useUrlState } from './hooks/useUrlState';
 import { useTimestamps } from './hooks/useTimestamps';
 import { useStats } from './hooks/useStats';
 import { useGraphStats } from './hooks/useGraphStats';
+import { useDistinctValues } from './hooks/useDistinctValues';
 import { FilterBar } from './components/filters/FilterBar';
 import { StatsPanel } from './components/stats/StatsPanel';
 import { DataTable } from './components/table/DataTable';
 import { DEFAULT_SORT, EMPTY_FILTERS } from './constants';
-import { deleteTimestamp, patchTimestamp } from './services/api';
-import type { FilterKey, SortConfig, EditableTimestampFields, Filters } from './types';
+import { batchSave } from './services/api';
+import type { FilterKey, SortConfig, BatchSavePayload, BatchSaveOutcome, Filters } from './types';
 
 function App(): React.JSX.Element {
   const {
@@ -42,6 +43,11 @@ function App(): React.JSX.Element {
 
   const { stats, isLoading: statsLoading } = useStats(appliedFilters);
   const { graphStats, isLoading: graphStatsLoading } = useGraphStats(appliedFilters);
+
+  // Distinct values for edit-mode validation (league, type, category)
+  const { values: validLeagues } = useDistinctValues('league', '');
+  const { values: validTypes } = useDistinctValues('attack_type', '');
+  const { values: validCategories } = useDistinctValues('category', '');
 
   const handleSortChange = useCallback(
     (newSort: SortConfig | null) => {
@@ -84,24 +90,18 @@ function App(): React.JSX.Element {
     setAppliedFilters(EMPTY_FILTERS);
   }, [filters, appliedFilters, clearAllFilters]);
 
-  const handleDeleteRow = useCallback(
-    (id: number) => {
-      deleteTimestamp(id)
-        .then(() => reload())
-        .catch((err: unknown) => {
-          console.error('[handleDeleteRow] Failed to delete timestamp:', err);
-        });
-    },
-    [reload],
-  );
-
-  const handleUpdateRow = useCallback(
-    (id: number, fields: EditableTimestampFields) => {
-      patchTimestamp(id, fields)
-        .then(() => reload())
-        .catch((err: unknown) => {
-          console.error('[handleUpdateRow] Failed to update timestamp:', err);
-        });
+  const handleBatchSave = useCallback(
+    async (payload: BatchSavePayload): Promise<BatchSaveOutcome> => {
+      try {
+        const outcome = await batchSave(payload);
+        if (outcome.success) {
+          reload();
+        }
+        return outcome;
+      } catch (err: unknown) {
+        console.error('[handleBatchSave] Failed to save batch:', err);
+        return { success: false, errors: [] };
+      }
     },
     [reload],
   );
@@ -145,8 +145,10 @@ function App(): React.JSX.Element {
           onAddFilter={handleAddFilter}
           onLoadMore={loadMore}
           onRetry={retry}
-          onDeleteRow={handleDeleteRow}
-          onUpdateRow={handleUpdateRow}
+          onSave={handleBatchSave}
+          validLeagues={validLeagues}
+          validTypes={validTypes}
+          validCategories={validCategories}
         />
       </main>
 

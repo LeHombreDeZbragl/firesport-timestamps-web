@@ -10,6 +10,7 @@ import {
   asAutocompleteColumn,
   parseId,
   parseUpdateBody,
+  parseBatchBody,
 } from '../middleware/validation';
 import {
   type TimestampsResponse,
@@ -18,6 +19,7 @@ import {
   type DistinctValuesResponse,
   type DistinctYearsResponse,
   type LeaguePairsResponse,
+  type BatchValidationError,
 } from '../types/index';
 
 const router = Router();
@@ -313,6 +315,102 @@ router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
   }
 
   res.status(204).send();
+});
+
+// ─── POST /api/timestamps/batch ────────────────────────────────────────────────
+//
+// Atomically saves a batch of changes: updates to existing rows, new inserts,
+// and staged deletes. All items are validated before any writes are performed.
+// If validation fails, returns 400 with per-field errors. If any write fails
+// after validation passes, returns 500.
+//
+router.post('/batch', async (req: Request, res: Response): Promise<void> => {
+  // 1. Structural + field-level validation
+  const parsed = parseBatchBody(req.body);
+  if (!parsed.valid) {
+    res.status(400).json({ error: parsed.error });
+    return;
+  }
+
+  const { data: { updates, inserts, deletes }, fieldErrors } = parsed;
+
+  // 2. Query distinct allowed values for league / attack_type / category
+  const [leagueResult, typeResult, categoryResult] = await Promise.all([
+    supabase.rpc('get_distinct_column_values', { p_column: 'league', p_search: '' }),
+    supabase.rpc('get_distinct_column_values', { p_column: 'attack_type', p_search: '' }),
+    supabase.rpc('get_distinct_column_values', { p_column: 'category', p_search: '' }),
+  ]);
+
+  if (leagueResult.error || typeResult.error || categoryResult.error) {
+    console.error('[POST /api/timestamps/batch] Failed to fetch distinct values');
+    res.status(500).json({ error: 'Failed to validate batch.' });
+    return;
+  }
+
+  const validLeagues = new Set<string>(
+    ((leagueResult.data as Array<{ value: string }>) ?? []).map((r) => r.value),
+  );
+  const validTypes = new Set<string>(
+    ((typeResult.data as Array<{ value: string }>) ?? []).map((r) => r.value),
+  );
+  const validCategories = new Set<string>(
+    ((categoryResult.data as Array<{ value: string }>) ?? []).map((r) => r.value),
+  );
+
+  // 3. Validate league / attack_type / category values against DB sets
+  const allRows: Array<{ rowRef: string; fields: Record<string, unknown> }> = [
+    ...updates.map((u) => ({ rowRef: `update:${u.id}`, fields: u.fields as Record<string, unknown> })),
+    ...inserts.map((ins, i) => ({ rowRef: `insert:${i}`, fields: ins as Record<string, unknown> })),
+  ];
+
+  for (const { rowRef, fields } of allRows) {
+    if ('league' in fields && typeof fields['league'] === 'string' && !validLeagues.has(fields['league'])) {
+      fieldErrors.push({ rowRef, field: 'league', message: `Liga "${fields['league']}" neexistuje.` });
+    }
+    if ('attack_type' in fields && typeof fields['attack_type'] === 'string' && !validTypes.has(fields['attack_type'])) {
+      fieldErrors.push({ rowRef, field: 'attack_type', message: `Typ "${fields['attack_type']}" neexistuje.` });
+    }
+    if ('category' in fields && typeof fields['category'] === 'string' && !validCategories.has(fields['category'])) {
+      fieldErrors.push({ rowRef, field: 'category', message: `Kategorie "${fields['category']}" neexistuje.` });
+    }
+  }
+
+  if (fieldErrors.length > 0) {
+    const errors: BatchValidationError[] = fieldErrors;
+    res.status(400).json({ errors });
+    return;
+  }
+
+  // 4. Execute writes (validate-first approach: errors above catch field problems)
+  try {
+    if (deletes.length > 0) {
+      const { error: deleteError } = await supabase
+        .from('timestamps')
+        .delete()
+        .in('id', deletes);
+      if (deleteError) throw deleteError;
+    }
+
+    for (const item of updates) {
+      const { error: updateError } = await supabase
+        .from('timestamps')
+        .update(item.fields)
+        .eq('id', item.id);
+      if (updateError) throw updateError;
+    }
+
+    if (inserts.length > 0) {
+      const { error: insertError } = await supabase
+        .from('timestamps')
+        .insert(inserts);
+      if (insertError) throw insertError;
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[POST /api/timestamps/batch] Write error:', err);
+    res.status(500).json({ error: 'Failed to save batch changes.' });
+  }
 });
 
 export default router;

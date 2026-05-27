@@ -181,3 +181,29 @@ export const AUTOCOMPLETE_COLUMNS: readonly AutocompleteColumn[] = [
  * the database automatically whenever `lp` or `pp` changes.
  */
 export type UpdatePayload = Partial<Omit<TimestampRow, 'id' | 'created_at' | 'final_time'>>;
+
+// ─── Batch save ────────────────────────────────────────────────────────────────
+
+/** All fields required when inserting a new row. */
+export type InsertPayload = Omit<TimestampRow, 'id' | 'created_at' | 'final_time'>;
+
+/** One update item in a batch save request. */
+export interface BatchUpdateItem {
+  id: number;
+  fields: UpdatePayload;
+}
+
+/** Body for POST /api/timestamps/batch. */
+export interface BatchSavePayload {
+  updates: BatchUpdateItem[];
+  inserts: InsertPayload[];
+  deletes: number[];
+}
+
+/** Per-field error reported when batch validation fails. */
+export interface BatchValidationError {
+  /** e.g. "update:1234", "insert:0" */
+  rowRef: string;
+  field: string;
+  message: string;
+}
