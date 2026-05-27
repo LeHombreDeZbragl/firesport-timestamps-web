@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useDistinctValues, type AutocompleteColumn } from '../../hooks/useDistinctValues';
-import { FilterPill } from './FilterPill';
 
 interface AutocompleteFilterProps {
   column: AutocompleteColumn;
@@ -65,14 +64,6 @@ export function AutocompleteFilter({
         {label}
       </label>
 
-      {selectedValues.length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {selectedValues.map((v) => (
-            <FilterPill key={v} label={v} onRemove={() => onRemove(v)} />
-          ))}
-        </div>
-      )}
-
       <div ref={containerRef} className="relative">
         <input
           ref={inputRef}
@@ -116,6 +107,22 @@ export function AutocompleteFilter({
           </ul>
         )}
       </div>
+
+      {!isOpen && selectedValues.length > 0 && (
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {selectedValues.map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => onRemove(v)}
+              aria-pressed={true}
+              className="rounded-md px-2.5 py-1 text-xs font-medium transition-colors bg-primary-600 text-white hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
+            >
+              {v}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
