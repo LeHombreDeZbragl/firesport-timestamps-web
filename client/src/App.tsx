@@ -12,6 +12,8 @@ import { batchSave } from './services/api';
 import type { FilterKey, SortConfig, BatchSavePayload, BatchSaveOutcome, Filters } from './types';
 
 function App(): React.JSX.Element {
+  const isAdmin = !!import.meta.env.VITE_ADMIN_SECRET;
+
   const {
     filters,
     sort,
@@ -146,6 +148,7 @@ function App(): React.JSX.Element {
           onLoadMore={loadMore}
           onRetry={retry}
           onSave={handleBatchSave}
+          isAdmin={isAdmin}
           validLeagues={validLeagues}
           validTypes={validTypes}
           validCategories={validCategories}

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import supabase from '../services/supabaseClient';
 import { buildTimestampsQuery } from '../services/queryBuilder';
+import { requireAdmin } from '../middleware/adminAuth';
 import {
   parseFilters,
   parseSort,
@@ -258,7 +259,7 @@ router.get(
 //   - `final_time` is a GENERATED ALWAYS AS STORED column; the database
 //     recomputes it automatically whenever `lp` or `pp` changes.
 //
-router.patch('/:id', async (req: Request, res: Response): Promise<void> => {
+router.patch('/:id', requireAdmin, async (req: Request, res: Response): Promise<void> => {
   const id = parseId(req.params['id']);
   if (id === null) {
     res.status(400).json({ error: 'Invalid id. Must be a positive integer.' });
@@ -295,7 +296,7 @@ router.patch('/:id', async (req: Request, res: Response): Promise<void> => {
 // Deletes a single timestamp row by its numeric id.
 // Intended for debugging/admin purposes.
 //
-router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
+router.delete('/:id', requireAdmin, async (req: Request, res: Response): Promise<void> => {
   const id = parseId(req.params['id']);
 
   if (id === null) {
@@ -324,7 +325,7 @@ router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
 // If validation fails, returns 400 with per-field errors. If any write fails
 // after validation passes, returns 500.
 //
-router.post('/batch', async (req: Request, res: Response): Promise<void> => {
+router.post('/batch', requireAdmin, async (req: Request, res: Response): Promise<void> => {
   // 1. Structural + field-level validation
   const parsed = parseBatchBody(req.body);
   if (!parsed.valid) {

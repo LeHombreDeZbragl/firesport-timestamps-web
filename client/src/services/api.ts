@@ -26,6 +26,11 @@ const apiClient = axios.create({
   timeout: 15000,
 });
 
+const adminSecret = import.meta.env.VITE_ADMIN_SECRET;
+if (adminSecret) {
+  apiClient.defaults.headers.common['x-admin-secret'] = adminSecret;
+}
+
 // ─── Param serialisation helpers ───────────────────────────────────────────────
 
 /**

@@ -159,6 +159,7 @@ interface DataTableProps {
   onLoadMore: () => void;
   onRetry: () => void;
   onSave: (payload: BatchSavePayload) => Promise<BatchSaveOutcome>;
+  isAdmin: boolean;
   validLeagues: string[];
   validTypes: string[];
   validCategories: string[];
@@ -177,6 +178,7 @@ export function DataTable({
   onLoadMore,
   onRetry,
   onSave,
+  isAdmin,
   validLeagues,
   validTypes,
   validCategories,
@@ -461,7 +463,7 @@ export function DataTable({
 
   const remaining = totalCount - rows.length;
 
-  const toolbar = (
+  const toolbar = isAdmin ? (
     <div className="flex justify-end gap-2">
       <button
         type="button"
@@ -513,7 +515,7 @@ export function DataTable({
         </button>
       )}
     </div>
-  );
+  ) : null;
 
   if (rows.length === 0 && newRows.length === 0) {
     return (
@@ -662,7 +664,7 @@ export function DataTable({
                       className="whitespace-nowrap px-2 py-2 text-center"
                       style={{ width: DELETE_COL_WIDTH }}
                     >
-                      {isEditMode && (
+                      {isAdmin && isEditMode && (
                         <button
                           type="button"
                           onClick={() => handleDeleteToggle(row.id)}
