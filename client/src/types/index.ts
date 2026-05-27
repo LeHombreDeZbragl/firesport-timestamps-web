@@ -18,12 +18,6 @@ export interface Timestamp {
   attack_type: string;
   category: string;
   team: string;
-  kos: number | null;
-  naber: number | null;
-  kohout: number | null;
-  rozdelovac: number | null;
-  lp_vystrik: number | null;
-  pp_vystrik: number | null;
   lp: number | null;
   pp: number | null;
   final_time: number | null; // generated: GREATEST(lp, pp) when both non-null
@@ -62,12 +56,6 @@ export type SortableColumn =
   | 'attack_type'
   | 'category'
   | 'team'
-  | 'kos'
-  | 'naber'
-  | 'kohout'
-  | 'rozdelovac'
-  | 'lp_vystrik'
-  | 'pp_vystrik'
   | 'lp'
   | 'pp'
   | 'final_time';

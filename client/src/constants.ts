@@ -142,60 +142,6 @@ export const COLUMN_DEFINITIONS: ColumnDefinition[] = [
     defaultVisible: false,
   },
   {
-    key: 'kos',
-    label: 'Koš',
-    filterable: false,
-    sortable: true,
-    sortColumn: 'kos',
-    defaultVisible: false,
-    format: (value) => (value !== null && value !== undefined ? String(value) : '-'),
-  },
-  {
-    key: 'naber',
-    label: 'Náběr',
-    filterable: false,
-    sortable: true,
-    sortColumn: 'naber',
-    defaultVisible: false,
-    format: (value) => (value !== null && value !== undefined ? String(value) : '-'),
-  },
-  {
-    key: 'kohout',
-    label: 'Kohout',
-    filterable: false,
-    sortable: true,
-    sortColumn: 'kohout',
-    defaultVisible: false,
-    format: (value) => (value !== null && value !== undefined ? String(value) : '-'),
-  },
-  {
-    key: 'rozdelovac',
-    label: 'Rozdělovač',
-    filterable: false,
-    sortable: true,
-    sortColumn: 'rozdelovac',
-    defaultVisible: false,
-    format: (value) => (value !== null && value !== undefined ? String(value) : '-'),
-  },
-  {
-    key: 'lp_vystrik',
-    label: 'LP Výstřik',
-    filterable: false,
-    sortable: true,
-    sortColumn: 'lp_vystrik',
-    defaultVisible: false,
-    format: (value) => (value !== null && value !== undefined ? String(value) : '-'),
-  },
-  {
-    key: 'pp_vystrik',
-    label: 'PP Výstřik',
-    filterable: false,
-    sortable: true,
-    sortColumn: 'pp_vystrik',
-    defaultVisible: false,
-    format: (value) => (value !== null && value !== undefined ? String(value) : '-'),
-  },
-  {
     key: 'link',
     label: 'Link',
     filterable: false,
@@ -281,19 +227,13 @@ export const EDITABLE_FIELD_INPUT_TYPE: Partial<Record<keyof Timestamp, 'text' |
   category: 'text',
   team: 'text',
   placement: 'number',
-  kos: 'number',
-  naber: 'number',
-  kohout: 'number',
-  rozdelovac: 'number',
-  lp_vystrik: 'number',
-  pp_vystrik: 'number',
   lp: 'number',
   pp: 'number',
 };
 
 /** Nullable numeric fields: an empty input is treated as null, not 0. */
 export const NULLABLE_NUMERIC_FIELDS = new Set<keyof Timestamp>([
-  'kos', 'naber', 'kohout', 'rozdelovac', 'lp_vystrik', 'pp_vystrik', 'lp', 'pp',
+  'lp', 'pp',
 ]);
 
 /** Fields the user cannot edit (id is immutable; final_time is DB-computed). */

@@ -16,12 +16,6 @@ export interface TimestampRow {
   attack_type: string;
   category: string;
   team: string;
-  kos: number | null;       // float4
-  naber: number | null;     // float4
-  kohout: number | null;    // float4
-  rozdelovac: number | null; // float4
-  lp_vystrik: number | null; // float4
-  pp_vystrik: number | null; // float4
   lp: number | null;        // float4
   pp: number | null;        // float4
   final_time: number | null; // float4, generated: GREATEST(lp,pp) when both non-null
@@ -55,12 +49,6 @@ export type SortableColumn =
   | 'attack_type'
   | 'category'
   | 'team'
-  | 'kos'
-  | 'naber'
-  | 'kohout'
-  | 'rozdelovac'
-  | 'lp_vystrik'
-  | 'pp_vystrik'
   | 'lp'
   | 'pp'
   | 'final_time';
@@ -152,12 +140,6 @@ export const SORTABLE_COLUMNS: readonly SortableColumn[] = [
   'attack_type',
   'category',
   'team',
-  'kos',
-  'naber',
-  'kohout',
-  'rozdelovac',
-  'lp_vystrik',
-  'pp_vystrik',
   'lp',
   'pp',
   'final_time',

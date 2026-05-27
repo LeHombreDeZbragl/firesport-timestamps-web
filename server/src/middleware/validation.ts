@@ -162,7 +162,7 @@ const EDITABLE_STRING_FIELDS: ReadonlyArray<string> = [
 ];
 
 const EDITABLE_NULLABLE_NUMERIC_FIELDS: ReadonlyArray<string> = [
-  'kos', 'naber', 'kohout', 'rozdelovac', 'lp_vystrik', 'pp_vystrik', 'lp', 'pp',
+  'lp', 'pp',
 ];
 
 const EDITABLE_REQUIRED_NUMERIC_FIELDS: ReadonlyArray<string> = ['placement'];
