@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import dotenv from 'dotenv';
 import path from 'path';
 import rateLimit from 'express-rate-limit';
@@ -9,8 +10,20 @@ import authRouter from './routes/auth';
 // Load .env from project root (two levels up from server/src/)
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
+// ─── Startup validation ────────────────────────────────────────────────────────
+
+const nodeEnv = process.env['NODE_ENV'] ?? 'development';
+if (!['production', 'development', 'test'].includes(nodeEnv)) {
+  throw new Error(`Invalid NODE_ENV: "${nodeEnv}". Must be production, development, or test.`);
+}
+
+const rawPort = process.env['PORT'] ?? '3001';
+const port = parseInt(rawPort, 10);
+if (!Number.isInteger(port) || port < 1 || port > 65535) {
+  throw new Error(`Invalid PORT: "${rawPort}". Must be an integer between 1 and 65535.`);
+}
+
 const app = express();
-const port = Number(process.env['PORT'] ?? 3001);
 
 // ─── Rate limiting ─────────────────────────────────────────────────────────────
 //
@@ -27,12 +40,29 @@ const apiRateLimiter = rateLimit({
 });
 
 // ─── Middleware ────────────────────────────────────────────────────────────────
+
+// Trust the first proxy hop (Fly.io / Nginx) so rate limiting keys on the
+// real client IP rather than the proxy address.
+app.set('trust proxy', 1);
+
+// Security headers — sets X-Frame-Options, X-Content-Type-Options, HSTS, etc.
+app.use(helmet());
+
+// CORS — in production the React bundle is served from the same origin as the
+// API so no cross-origin headers are needed; in development Vite runs on a
+// different port and needs to be explicitly allowed.
+// Override by setting CORS_ORIGIN in the environment.
+const corsOrigin = process.env['CORS_ORIGIN'] ??
+  (nodeEnv === 'production' ? false : 'http://localhost:5173');
+
 app.use(
   cors({
-    origin: process.env['NODE_ENV'] === 'production' ? false : 'http://localhost:5173',
-    methods: ['GET'],
+    origin: corsOrigin,
+    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
+
 app.use(express.json());
 
 // ─── API routes ────────────────────────────────────────────────────────────────

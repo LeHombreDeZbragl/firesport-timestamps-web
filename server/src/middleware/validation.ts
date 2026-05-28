@@ -25,15 +25,22 @@ const DEFAULT_SORT_ORDER = 'desc' as const;
 /**
  * Splits a comma-separated query string value into a trimmed, non-empty array.
  * e.g. "Jistebník, Bělá, " → ["Jistebník", "Bělá"]
+ *
+ * Guards:
+ *  - The raw string is silently ignored when it exceeds 5 000 characters
+ *    (prevents trivially large payloads from reaching the DB).
+ *  - Each individual item is truncated to 200 characters.
+ *  - At most 100 items are returned; extras are dropped.
  */
 function parseCommaSeparated(value: unknown): string[] {
-  if (typeof value !== 'string' || value.trim() === '') {
+  if (typeof value !== 'string' || value.trim() === '' || value.length > 5000) {
     return [];
   }
   return value
     .split(',')
-    .map((item) => item.trim())
-    .filter((item) => item.length > 0);
+    .map((item) => item.trim().slice(0, 200))
+    .filter((item) => item.length > 0)
+    .slice(0, 100);
 }
 
 /**
@@ -93,9 +100,10 @@ export function parseSort(query: Request['query']): ParsedSort {
 /**
  * Parses and validates pagination query parameters.
  * Clamps limit to [1, PAGE_SIZE_MAX].
+ * Caps offset at 100 000 to prevent deep table scans.
  */
 export function parsePagination(query: Request['query']): ParsedPagination {
-  const offset = parseNonNegativeInt(query['offset'], 0);
+  const offset = Math.min(parseNonNegativeInt(query['offset'], 0), 100_000);
   const rawLimit = parseNonNegativeInt(query['limit'], PAGE_SIZE_DEFAULT);
   const limit = Math.min(Math.max(rawLimit, 1), PAGE_SIZE_MAX);
   return { limit, offset };
@@ -126,13 +134,17 @@ export function validateAutocompleteColumn(
 /**
  * Parses the optional `search` query param for autocomplete filtering.
  * Returns an empty string if not provided or blank.
+ * Strips ILIKE metacharacters (% and _) to prevent performance DoS via
+ * patterns like "%a%b%c%" that force full-table scans even with parameterised
+ * queries.
  */
 export function parseSearchTerm(query: Request['query']): string {
   const search = query['search'];
   if (typeof search !== 'string') {
     return '';
   }
-  return search.trim().slice(0, 100); // cap length to avoid excessively long ILIKE patterns
+  // Strip ILIKE wildcards, then cap length.
+  return search.trim().replace(/[%_]/g, '').slice(0, 100);
 }
 
 /**
