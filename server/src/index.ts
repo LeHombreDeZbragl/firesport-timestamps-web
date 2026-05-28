@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import rateLimit from 'express-rate-limit';
 import timestampsRouter from './routes/timestamps';
+import authRouter from './routes/auth';
 
 // Load .env from project root (two levels up from server/src/)
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
@@ -36,6 +37,7 @@ app.use(express.json());
 
 // ─── API routes ────────────────────────────────────────────────────────────────
 app.use('/api', apiRateLimiter);
+app.use('/api/auth', authRouter);
 app.use('/api/timestamps', timestampsRouter);
 
 // ─── Health check ──────────────────────────────────────────────────────────────

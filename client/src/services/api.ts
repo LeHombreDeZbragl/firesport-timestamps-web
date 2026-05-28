@@ -26,9 +26,57 @@ const apiClient = axios.create({
   timeout: 15000,
 });
 
-const adminSecret = import.meta.env.VITE_ADMIN_SECRET;
-if (adminSecret) {
-  apiClient.defaults.headers.common['x-admin-secret'] = adminSecret;
+// ─── Token helpers ──────────────────────────────────────────────────────────────
+
+const TOKEN_KEY = 'admin_token';
+
+export function getAdminToken(): string | null {
+  return sessionStorage.getItem(TOKEN_KEY);
+}
+
+export function setAdminToken(token: string): void {
+  sessionStorage.setItem(TOKEN_KEY, token);
+  apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+}
+
+export function clearAdminToken(): void {
+  sessionStorage.removeItem(TOKEN_KEY);
+  delete apiClient.defaults.headers.common['Authorization'];
+}
+
+export function isAdminAuthenticated(): boolean {
+  return getAdminToken() !== null;
+}
+
+// Restore token from sessionStorage on module load (e.g. page refresh within the same tab).
+const _storedToken = getAdminToken();
+if (_storedToken) {
+  apiClient.defaults.headers.common['Authorization'] = `Bearer ${_storedToken}`;
+}
+
+// ─── 401 interceptor ────────────────────────────────────────────────────────────
+//
+// When the server returns 401 (expired or invalid JWT) clear the stored token
+// and dispatch a custom event so the app can show the login modal.
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error: unknown) => {
+    if (axios.isAxiosError(error) && error.response?.status === 401) {
+      clearAdminToken();
+      window.dispatchEvent(new CustomEvent('admin-auth-required'));
+    }
+    return Promise.reject(error);
+  },
+);
+
+/**
+ * Returns whether the server has admin login enabled (i.e. ADMIN_SECRET is set).
+ * The client uses this to decide whether to show the "Admin login" button.
+ */
+export async function fetchAuthStatus(): Promise<boolean> {
+  const response: AxiosResponse<{ adminEnabled: boolean }> = await axios.get('/api/auth/status');
+  return response.data.adminEnabled;
 }
 
 // ─── Param serialisation helpers ───────────────────────────────────────────────
@@ -186,4 +234,16 @@ export async function batchSave(payload: BatchSavePayload): Promise<BatchSaveOut
     }
     throw err;
   }
+}
+
+/**
+ * Sends the admin password to the server and, on success, stores the returned
+ * JWT in sessionStorage via setAdminToken().
+ * Throws with a user-facing message on failure.
+ */
+export async function login(password: string): Promise<void> {
+  const response: AxiosResponse<{ token: string }> = await axios.post('/api/auth/login', {
+    password,
+  });
+  setAdminToken(response.data.token);
 }

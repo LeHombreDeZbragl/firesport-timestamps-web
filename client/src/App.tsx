@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useUrlState } from './hooks/useUrlState';
 import { useTimestamps } from './hooks/useTimestamps';
 import { useStats } from './hooks/useStats';
@@ -7,12 +7,42 @@ import { useDistinctValues } from './hooks/useDistinctValues';
 import { FilterBar } from './components/filters/FilterBar';
 import { StatsPanel } from './components/stats/StatsPanel';
 import { DataTable } from './components/table/DataTable';
+import { AdminLoginModal } from './components/AdminLoginModal';
 import { DEFAULT_SORT, EMPTY_FILTERS } from './constants';
-import { batchSave } from './services/api';
+import { batchSave, isAdminAuthenticated, clearAdminToken, fetchAuthStatus } from './services/api';
 import type { FilterKey, SortConfig, BatchSavePayload, BatchSaveOutcome, Filters } from './types';
 
 function App(): React.JSX.Element {
-  const isAdmin = !!import.meta.env.VITE_ADMIN_SECRET;
+  const [isAdmin, setIsAdmin] = useState(isAdminAuthenticated);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  // null = still loading, false = not available (production without ADMIN_SECRET)
+  const [adminAvailable, setAdminAvailable] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    fetchAuthStatus()
+      .then(setAdminAvailable)
+      .catch(() => setAdminAvailable(false));
+  }, []);
+
+  const handleLogout = useCallback(() => {
+    clearAdminToken();
+    setIsAdmin(false);
+  }, []);
+
+  // Listen for 401 responses from the API (expired token) and show the login modal.
+  useEffect(() => {
+    const handler = () => {
+      setIsAdmin(false);
+      setShowLoginModal(true);
+    };
+    window.addEventListener('admin-auth-required', handler);
+    return () => window.removeEventListener('admin-auth-required', handler);
+  }, []);
+
+  const handleLoginSuccess = useCallback(() => {
+    setIsAdmin(true);
+    setShowLoginModal(false);
+  }, []);
 
   const {
     filters,
@@ -112,12 +142,31 @@ function App(): React.JSX.Element {
     <div className="min-h-screen flex flex-col bg-surface-950 text-surface-100">
       {/* ── Header ── */}
       <header className="bg-surface-900 border-b border-surface-700 px-6 py-4 shrink-0">
-        <a
-          href="https://firesport-timestamps-web.fly.dev/"
-          className="inline-block text-xl font-bold tracking-tight text-white hover:text-primary-300 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 rounded"
-        >
-          Firesport Timestamps
-        </a>
+        <div className="flex items-center gap-4">
+          <a
+            href="/"
+            className="inline-block text-xl font-bold tracking-tight text-white hover:text-primary-300 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 rounded"
+          >
+            Firesport Timestamps
+          </a>
+          {adminAvailable && !isAdmin && (
+            <button
+              onClick={() => setShowLoginModal(true)}
+              className="rounded-md border border-surface-600 bg-surface-800 px-3 py-1 text-xs font-medium text-surface-300 transition-colors hover:border-primary-500 hover:text-primary-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
+            >
+              Admin login
+            </button>
+          )}
+          {isAdmin && (
+            <button
+              onClick={handleLogout}
+              title="Disable admin mode"
+              className="rounded-md border border-green-700 bg-green-900/30 px-3 py-1 text-xs font-medium text-green-400 transition-colors hover:border-red-600 hover:bg-red-900/30 hover:text-red-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
+            >
+              Admin
+            </button>
+          )}
+        </div>
       </header>
 
       {/* ── Main content ── */}
@@ -170,6 +219,7 @@ function App(): React.JSX.Element {
           firesport.eu
         </a>
       </footer>
+      {showLoginModal && <AdminLoginModal onSuccess={handleLoginSuccess} onClose={() => setShowLoginModal(false)} />}
     </div>
   );
 }
