@@ -24,6 +24,7 @@ client/dist/
 
 # Project-specific non-source dirs
 image/
+backups/
 
 # Docs / planning (not needed in image)
 README.md
