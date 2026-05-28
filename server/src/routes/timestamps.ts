@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import supabase from '../services/supabaseClient';
+import logger from '../services/logger';
 import { buildTimestampsQuery } from '../services/queryBuilder';
 import { requireAdmin } from '../middleware/adminAuth';
 import {
@@ -50,7 +51,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
   );
 
   if (error) {
-    console.error('[GET /api/timestamps] Supabase error:', error.message);
+    logger.error({ err: error }, 'GET /api/timestamps — Supabase error');
     res.status(500).json({ error: 'Failed to fetch timestamps.' });
     return;
   }
@@ -84,7 +85,7 @@ router.get('/stats', async (req: Request, res: Response): Promise<void> => {
   });
 
   if (error) {
-    console.error('[GET /api/timestamps/stats] Supabase RPC error:', error.message);
+    logger.error({ err: error }, 'GET /api/timestamps/stats — Supabase RPC error');
     res.status(500).json({ error: 'Failed to fetch stats.' });
     return;
   }
@@ -137,7 +138,7 @@ router.get('/graph-stats', async (req: Request, res: Response): Promise<void> =>
   });
 
   if (error) {
-    console.error('[GET /api/timestamps/graph-stats] Supabase RPC error:', error.message);
+    logger.error({ err: error }, 'GET /api/timestamps/graph-stats — Supabase RPC error');
     res.status(500).json({ error: 'Failed to fetch graph stats.' });
     return;
   }
@@ -187,7 +188,7 @@ router.get('/distinct/years', async (_req: Request, res: Response): Promise<void
   const { data, error } = await supabase.rpc('get_distinct_attack_years');
 
   if (error) {
-    console.error('[GET /api/timestamps/distinct/years] Supabase RPC error:', error.message);
+    logger.error({ err: error }, 'GET /api/timestamps/distinct/years — Supabase RPC error');
     res.status(500).json({ error: 'Failed to fetch distinct years.' });
     return;
   }
@@ -207,7 +208,7 @@ router.get('/distinct/league-pairs', async (_req: Request, res: Response): Promi
   const { data, error } = await supabase.rpc('get_distinct_league_pairs');
 
   if (error) {
-    console.error('[GET /api/timestamps/distinct/league-pairs] Supabase RPC error:', error.message);
+    logger.error({ err: error }, 'GET /api/timestamps/distinct/league-pairs — Supabase RPC error');
     res.status(500).json({ error: 'Failed to fetch league pairs.' });
     return;
   }
@@ -241,7 +242,7 @@ router.get(
     });
 
     if (error) {
-      console.error(`[GET /api/timestamps/distinct/${column}] Supabase RPC error:`, error.message);
+      logger.error({ err: error, column }, 'GET /api/timestamps/distinct/:column — Supabase RPC error');
       res.status(500).json({ error: `Failed to fetch distinct values for "${column}".` });
       return;
     }
@@ -284,7 +285,7 @@ router.patch('/:id', requireAdmin, async (req: Request, res: Response): Promise<
       res.status(404).json({ error: 'Timestamp not found.' });
       return;
     }
-    console.error(`[PATCH /api/timestamps/${id}] Supabase error:`, error.message);
+    logger.error({ err: error, id }, 'PATCH /api/timestamps/:id — Supabase error');
     res.status(500).json({ error: 'Failed to update timestamp.' });
     return;
   }
@@ -310,7 +311,7 @@ router.delete('/:id', requireAdmin, async (req: Request, res: Response): Promise
     .eq('id', id);
 
   if (error) {
-    console.error(`[DELETE /api/timestamps/${id}] Supabase error:`, error.message);
+    logger.error({ err: error, id }, 'DELETE /api/timestamps/:id — Supabase error');
     res.status(500).json({ error: 'Failed to delete timestamp.' });
     return;
   }
@@ -343,7 +344,10 @@ router.post('/batch', requireAdmin, async (req: Request, res: Response): Promise
   ]);
 
   if (leagueResult.error || typeResult.error || categoryResult.error) {
-    console.error('[POST /api/timestamps/batch] Failed to fetch distinct values');
+    logger.error(
+      { leagueErr: leagueResult.error, typeErr: typeResult.error, categoryErr: categoryResult.error },
+      'POST /api/timestamps/batch — failed to fetch distinct values for validation',
+    );
     res.status(500).json({ error: 'Failed to validate batch.' });
     return;
   }
@@ -409,7 +413,7 @@ router.post('/batch', requireAdmin, async (req: Request, res: Response): Promise
 
     res.json({ success: true });
   } catch (err) {
-    console.error('[POST /api/timestamps/batch] Write error:', err);
+    logger.error({ err }, 'POST /api/timestamps/batch — write error');
     res.status(500).json({ error: 'Failed to save batch changes.' });
   }
 });

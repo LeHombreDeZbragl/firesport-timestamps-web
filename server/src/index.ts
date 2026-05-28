@@ -4,8 +4,12 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import path from 'path';
 import rateLimit from 'express-rate-limit';
+import pinoHttp from 'pino-http';
+import { randomUUID } from 'crypto';
 import timestampsRouter from './routes/timestamps';
 import authRouter from './routes/auth';
+import logger from './services/logger';
+import supabase from './services/supabaseClient';
 
 // Load .env from project root (two levels up from server/src/)
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
@@ -48,6 +52,28 @@ app.set('trust proxy', 1);
 // Security headers — sets X-Frame-Options, X-Content-Type-Options, HSTS, etc.
 app.use(helmet());
 
+// Request / response logging — every request gets a unique ID for tracing.
+// The ID is exposed as an X-Request-Id response header for client-side debugging.
+app.use(
+  pinoHttp({
+    logger,
+    genReqId: () => randomUUID(),
+    customSuccessMessage: (req, res) =>
+      `${req.method} ${req.url} → ${res.statusCode}`,
+    customErrorMessage: (_req, _res, err) => err.message,
+    // Don't log health-check polls to avoid log spam.
+    autoLogging: {
+      ignore: (req) => req.url === '/api/health',
+    },
+  })
+);
+
+// Expose request ID header so clients can reference it in support requests.
+app.use((req, res, next) => {
+  res.setHeader('X-Request-Id', (req as express.Request & { id?: string }).id ?? '');
+  next();
+});
+
 // CORS — in production the React bundle is served from the same origin as the
 // API so no cross-origin headers are needed; in development Vite runs on a
 // different port and needs to be explicitly allowed.
@@ -71,8 +97,19 @@ app.use('/api/auth', authRouter);
 app.use('/api/timestamps', timestampsRouter);
 
 // ─── Health check ──────────────────────────────────────────────────────────────
-app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+//
+// Verifies both that the Node process is alive AND that the database is
+// reachable. Fly.io uses this path (configured in fly.toml) to decide whether
+// to route traffic to this machine.
+//
+app.get('/api/health', async (_req, res) => {
+  try {
+    const { error } = await supabase.from('timestamps').select('id').limit(1);
+    if (error) throw error;
+    res.json({ status: 'ok', db: 'ok', timestamp: new Date().toISOString() });
+  } catch {
+    res.status(503).json({ status: 'degraded', db: 'error', timestamp: new Date().toISOString() });
+  }
 });
 
 // ─── Global error handler ──────────────────────────────────────────────────────
@@ -84,7 +121,7 @@ app.use(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _next: express.NextFunction
   ) => {
-    console.error('[server] Unhandled error:', err.message);
+    logger.error({ err }, 'Unhandled error');
     res.status(500).json({ error: 'An unexpected server error occurred.' });
   }
 );
@@ -98,8 +135,23 @@ if (process.env['NODE_ENV'] === 'production') {
   });
 }
 
-// ─── Start ─────────────────────────────────────────────────────────────────────
-app.listen(port, () => {
-  console.log(`[server] Running at http://localhost:${port}`);
-  console.log(`[server] Supabase URL: ${process.env['SUPABASE_URL'] ?? 'NOT SET'}`);
+// ─── Start + graceful shutdown ─────────────────────────────────────────────────
+const server = app.listen(port, () => {
+  logger.info({ port, env: nodeEnv }, 'Server started');
 });
+
+function shutdown(signal: string): void {
+  logger.info({ signal }, 'Shutdown signal received — stopping server');
+  server.close(() => {
+    logger.info('All connections closed — process exiting');
+    process.exit(0);
+  });
+  // Force-exit if connections don't drain within 10 s (e.g. keep-alive sockets).
+  setTimeout(() => {
+    logger.error('Forced shutdown after 10 s timeout');
+    process.exit(1);
+  }, 10_000).unref();
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
