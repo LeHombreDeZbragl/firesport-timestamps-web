@@ -39,6 +39,8 @@ import type {
 
 const BASE_VISIBLE_COLUMNS = COLUMN_DEFINITIONS.filter((col) => col.defaultVisible);
 
+const COLUMN_ORDER_STORAGE_KEY = 'firesport-column-order';
+
 const DEFAULT_COLUMN_WIDTHS: Record<string, number> = {
   team: 180,
   lp: 70,
@@ -183,9 +185,24 @@ export function DataTable({
   validTypes,
   validCategories,
 }: DataTableProps): React.JSX.Element {
-  const [columnOrder, setColumnOrder] = useState<string[]>(() =>
-    BASE_VISIBLE_COLUMNS.map((c) => c.key as string),
-  );
+  const [columnOrder, setColumnOrder] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem(COLUMN_ORDER_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as unknown;
+        if (Array.isArray(parsed) && parsed.every((item) => typeof item === 'string')) {
+          return parsed as string[];
+        }
+      }
+    } catch {
+      // Ignore parse errors — fall through to default
+    }
+    return BASE_VISIBLE_COLUMNS.map((c) => c.key as string);
+  });
+
+  useEffect(() => {
+    localStorage.setItem(COLUMN_ORDER_STORAGE_KEY, JSON.stringify(columnOrder));
+  }, [columnOrder]);
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(DEFAULT_COLUMN_WIDTHS);
   const [isResizing, setIsResizing] = useState(false);
   const resizingRef = useRef<{ key: string; startX: number; startWidth: number } | null>(null);

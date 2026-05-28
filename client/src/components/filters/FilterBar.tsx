@@ -2,6 +2,7 @@ import { AutocompleteFilter } from './AutocompleteFilter';
 import { ButtonGroupFilter } from './ButtonGroupFilter';
 import { LeagueFilter } from './LeagueFilter';
 import { YearFilter } from './YearFilter';
+import { LoadingSpinner } from '../common/LoadingSpinner';
 import type { Filters, FilterKey } from '../../types';
 
 interface FilterBarProps {
@@ -11,6 +12,7 @@ interface FilterBarProps {
   onClearAll: () => void;
   onSearch: () => void;
   filtersChanged: boolean;
+  isSearching: boolean;
 }
 
 export function FilterBar({
@@ -20,6 +22,7 @@ export function FilterBar({
   onClearAll,
   onSearch,
   filtersChanged,
+  isSearching,
 }: FilterBarProps): React.JSX.Element {
   return (
     <section aria-label="Filters">
@@ -119,13 +122,14 @@ export function FilterBar({
             <button
               type="button"
               onClick={onSearch}
-              className={`rounded-md border px-4 py-1.5 text-sm font-semibold focus:outline-none focus-visible:ring-2 transition-colors ${
-                filtersChanged
+              disabled={isSearching}
+              className={`inline-flex items-center justify-center gap-2 rounded-md border px-4 py-1.5 text-sm font-semibold focus:outline-none focus-visible:ring-2 transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                filtersChanged && !isSearching
                   ? 'border-emerald-400 bg-surface-700 text-emerald-300 hover:bg-surface-600 hover:text-emerald-200 focus-visible:ring-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.25)]'
                   : 'border-surface-500 bg-surface-700 text-surface-200 hover:border-primary-400 hover:bg-surface-600 hover:text-white focus-visible:ring-orange-400'
               }`}
             >
-              Vyhledat
+              {isSearching ? <LoadingSpinner size="sm" /> : 'Vyhledat'}
             </button>
           </div>
         </div>

@@ -180,6 +180,7 @@ function App(): React.JSX.Element {
             onClearAll={handleClearAll}
             onSearch={handleSearch}
             filtersChanged={filtersChanged}
+            isSearching={isLoading}
           />
         </div>
 
