@@ -9,7 +9,6 @@ import { randomUUID } from 'crypto';
 import timestampsRouter from './routes/timestamps';
 import authRouter from './routes/auth';
 import logger from './services/logger';
-import supabase from './services/supabaseClient';
 
 // Load .env from project root (two levels up from server/src/)
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
@@ -98,18 +97,17 @@ app.use('/api/timestamps', timestampsRouter);
 
 // ─── Health check ──────────────────────────────────────────────────────────────
 //
-// Verifies both that the Node process is alive AND that the database is
-// reachable. Fly.io uses this path (configured in fly.toml) to decide whether
-// to route traffic to this machine.
+// Lightweight liveness probe — confirms the Node process is alive and able to
+// serve requests. Fly.io polls this every 30 s (fly.toml) to decide whether to
+// route traffic to this machine.
 //
-app.get('/api/health', async (_req, res) => {
-  try {
-    const { error } = await supabase.from('timestamps').select('id').limit(1);
-    if (error) throw error;
-    res.json({ status: 'ok', db: 'ok', timestamp: new Date().toISOString() });
-  } catch {
-    res.status(503).json({ status: 'degraded', db: 'error', timestamp: new Date().toISOString() });
-  }
+// Deliberately does NOT query the database: Supabase routes all queries through
+// PostgREST which maintains its own connection pool. A DB ping here would add
+// ~2 880 unnecessary queries per day while providing little extra signal
+// (PostgREST/Supabase have their own health monitoring).
+//
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // ─── Global error handler ──────────────────────────────────────────────────────
