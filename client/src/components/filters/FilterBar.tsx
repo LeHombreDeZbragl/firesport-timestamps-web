@@ -2,7 +2,6 @@ import { AutocompleteFilter } from './AutocompleteFilter';
 import { ButtonGroupFilter } from './ButtonGroupFilter';
 import { LeagueFilter } from './LeagueFilter';
 import { YearFilter } from './YearFilter';
-import { LoadingSpinner } from '../common/LoadingSpinner';
 import type { Filters, FilterKey } from '../../types';
 
 interface FilterBarProps {
@@ -10,9 +9,6 @@ interface FilterBarProps {
   onAddFilter: (filterKey: FilterKey, value: string) => void;
   onRemoveFilter: (filterKey: FilterKey, value: string) => void;
   onClearAll: () => void;
-  onSearch: () => void;
-  filtersChanged: boolean;
-  isSearching: boolean;
 }
 
 export function FilterBar({
@@ -20,9 +16,6 @@ export function FilterBar({
   onAddFilter,
   onRemoveFilter,
   onClearAll,
-  onSearch,
-  filtersChanged,
-  isSearching,
 }: FilterBarProps): React.JSX.Element {
   return (
     <section aria-label="Filters">
@@ -107,29 +100,13 @@ export function FilterBar({
               }
             }}
           />
-          <div className="flex justify-between items-center gap-3">
+          <div className="flex justify-end items-center gap-3">
             <button
               type="button"
               onClick={onClearAll}
-              className={`rounded-md border px-4 py-1.5 text-sm font-semibold focus:outline-none focus-visible:ring-2 transition-colors ${
-                filtersChanged
-                  ? 'border-red-400 bg-surface-700 text-red-300 hover:bg-surface-600 hover:text-red-200 focus-visible:ring-red-400 shadow-[0_0_6px_rgba(255,0,0,0.25)]'
-                  : 'border-surface-500 bg-surface-700 text-surface-200 hover:border-primary-400 hover:bg-surface-600 hover:text-white focus-visible:ring-orange-400'
-              }`}
+              className="rounded-md border px-4 py-1.5 text-sm font-semibold focus:outline-none focus-visible:ring-2 transition-colors border-surface-500 bg-surface-700 text-surface-200 hover:border-red-400 hover:bg-surface-600 hover:text-red-200 focus-visible:ring-red-400"
             >
               Vymazat filtry
-            </button>
-            <button
-              type="button"
-              onClick={onSearch}
-              disabled={isSearching}
-              className={`inline-flex items-center justify-center gap-2 rounded-md border px-4 py-1.5 text-sm font-semibold focus:outline-none focus-visible:ring-2 transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-                filtersChanged && !isSearching
-                  ? 'border-emerald-400 bg-surface-700 text-emerald-300 hover:bg-surface-600 hover:text-emerald-200 focus-visible:ring-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.25)]'
-                  : 'border-surface-500 bg-surface-700 text-surface-200 hover:border-primary-400 hover:bg-surface-600 hover:text-white focus-visible:ring-orange-400'
-              }`}
-            >
-              {isSearching ? <LoadingSpinner size="sm" /> : 'Vyhledat'}
             </button>
           </div>
         </div>

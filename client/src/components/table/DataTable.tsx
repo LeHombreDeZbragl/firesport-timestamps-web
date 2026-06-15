@@ -52,6 +52,7 @@ const DEFAULT_COLUMN_WIDTHS: Record<string, number> = {
   placement: 96,
   attack_date: 100,
   place: 180,
+  link: 64,
 };
 
 const DELETE_COL_WIDTH = 48;
@@ -106,7 +107,7 @@ function validateAndBuildPayload(
         }
       }
     } else {
-      if (key !== 'link' && value.trim() === '') {
+      if (key !== 'link' && key !== 'league' && value.trim() === '') {
         errors[strKey] = 'Pole nesmí být prázdné';
       } else if (key === 'league' && validLeagues.length > 0 && value.trim() !== '' && !validLeagues.includes(value)) {
         errors[strKey] = 'Tato liga neexistuje';
@@ -135,6 +136,9 @@ function validateAndBuildPayload(
       } else {
         result[strKey] = parseInt(value, 10);
       }
+    } else if (key === 'league' && value.trim() === '') {
+      // `league` is nullable: an empty value is stored as NULL.
+      result[strKey] = null;
     } else {
       result[strKey] = value;
     }
@@ -186,18 +190,23 @@ export function DataTable({
   validCategories,
 }: DataTableProps): React.JSX.Element {
   const [columnOrder, setColumnOrder] = useState<string[]>(() => {
+    const defaultOrder = BASE_VISIBLE_COLUMNS.map((c) => c.key as string);
     try {
       const stored = localStorage.getItem(COLUMN_ORDER_STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored) as unknown;
         if (Array.isArray(parsed) && parsed.every((item) => typeof item === 'string')) {
-          return parsed as string[];
+          const storedOrder = parsed as string[];
+          // Append any newly default-visible columns missing from the stored order
+          // (e.g. the "link" column) so they show up for returning users.
+          const missing = defaultOrder.filter((key) => !storedOrder.includes(key));
+          return [...storedOrder, ...missing];
         }
       }
     } catch {
       // Ignore parse errors — fall through to default
     }
-    return BASE_VISIBLE_COLUMNS.map((c) => c.key as string);
+    return defaultOrder;
   });
 
   useEffect(() => {

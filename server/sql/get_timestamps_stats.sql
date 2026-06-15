@@ -60,7 +60,11 @@ AS $$
   WHERE
     (p_team        IS NULL OR team        = ANY(p_team))
     AND (p_category    IS NULL OR category    = ANY(p_category))
-    AND (p_league      IS NULL OR league      = ANY(p_league))
+    AND (
+      p_league IS NULL
+      OR league = ANY(p_league)
+      OR (league IS NULL AND '__none__' = ANY(p_league))  -- NO_LEAGUE_VALUE sentinel
+    )
     AND (p_place       IS NULL OR place       = ANY(p_place))
     AND (p_attack_type IS NULL OR attack_type = ANY(p_attack_type))
     AND (

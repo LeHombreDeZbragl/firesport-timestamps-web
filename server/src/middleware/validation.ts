@@ -266,6 +266,12 @@ export function parseUpdateBody(
         return { valid: false, error: `Field "attack_date" year must be between ${DATE_YEAR_MIN} and ${currentYear}.` };
       }
       data[key] = value;
+    } else if (
+      key === 'league' &&
+      (value === null || (typeof value === 'string' && value.trim() === ''))
+    ) {
+      // `league` is nullable: null/empty is stored as NULL.
+      data[key] = null;
     } else {
       // Remaining string fields
       if (typeof value !== 'string') {
@@ -283,9 +289,10 @@ export function parseUpdateBody(
 
 // ─── Batch save validation ─────────────────────────────────────────────────────
 
-// Required string fields for an insert (all DB NOT NULL columns minus auto-set ones)
+// Required string fields for an insert (all DB NOT NULL columns minus auto-set ones).
+// `league` is nullable and handled separately as an optional field.
 const REQUIRED_INSERT_STRING_FIELDS: ReadonlyArray<string> = [
-  'attack_date', 'league', 'place', 'attack_type', 'category', 'team',
+  'attack_date', 'place', 'attack_type', 'category', 'team',
 ];
 
 /**
@@ -340,6 +347,14 @@ function validateBatchField(
     return value;
   }
 
+  // `league` is nullable: null/undefined/empty is stored as NULL.
+  if (
+    key === 'league' &&
+    (value === null || value === undefined || (typeof value === 'string' && value.trim() === ''))
+  ) {
+    return null;
+  }
+
   // Remaining string fields (league, place, attack_type, category, team, link)
   if (typeof value !== 'string') {
     errors.push({ rowRef, field: key, message: 'Pole musí být text.' });
@@ -383,6 +398,14 @@ function validateBatchInsert(
     if (value !== undefined) data['link'] = value;
   } else {
     data['link'] = '';
+  }
+
+  // league (optional, nullable — empty/absent is stored as NULL)
+  if (input['league'] !== undefined && input['league'] !== null) {
+    const value = validateBatchField('league', input['league'], rowRef, errors);
+    if (value !== undefined) data['league'] = value;
+  } else {
+    data['league'] = null;
   }
 
   // placement (required)

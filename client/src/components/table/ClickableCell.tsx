@@ -1,4 +1,5 @@
 import type { ColumnDefinition, Timestamp, FilterKey } from '../../types';
+import { FIRESPORT_LINK_BASE } from '../../constants';
 
 interface ClickableCellProps {
   columnDef: ColumnDefinition;
@@ -22,16 +23,17 @@ export function ClickableCell({
 
   // Special rendering: link column
   if (columnDef.key === 'link' && typeof value === 'string' && value.length > 0) {
+    const href = value.startsWith('http') ? value : `${FIRESPORT_LINK_BASE}${value}`;
     return (
       <td className={`overflow-x-auto whitespace-nowrap px-3 py-2${strikethroughClass}`}>
         <a
-          href={value}
+          href={href}
           target="_blank"
           rel="noopener noreferrer"
           className="text-primary-400 hover:text-primary-300 underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 transition-colors"
           onClick={(e) => e.stopPropagation()}
         >
-          Zobrazit
+          link
         </a>
       </td>
     );

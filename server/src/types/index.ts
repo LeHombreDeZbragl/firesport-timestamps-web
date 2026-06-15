@@ -9,7 +9,7 @@ export interface TimestampRow {
   id: number;
   created_at: string;       // timestamptz → ISO string from Supabase
   attack_date: string;      // date → "YYYY-MM-DD"
-  league: string;
+  league: string | null;    // nullable — empty league allowed
   place: string;
   placement: number;        // int2
   link: string;
@@ -20,6 +20,16 @@ export interface TimestampRow {
   pp: number | null;        // float4
   final_time: number | null; // float4, generated: GREATEST(lp,pp) when both non-null
 }
+
+// ─── No-league filter sentinel ───────────────────────────────────────────────────
+
+/**
+ * Reserved league filter value meaning "rows whose league is NULL".
+ * The client sends this in the `league` filter; the server query builder and the
+ * stats/graph RPCs translate it into an IS NULL condition. Must match
+ * NO_LEAGUE_VALUE in client/src/constants.ts and the literal in the SQL RPCs.
+ */
+export const NO_LEAGUE_VALUE = '__none__';
 
 // ─── Filter inputs ─────────────────────────────────────────────────────────────
 

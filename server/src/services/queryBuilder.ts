@@ -5,7 +5,16 @@ import {
   type ParsedSort,
   type ParsedPagination,
   type AutocompleteColumn,
+  NO_LEAGUE_VALUE,
 } from '../types/index';
+
+/**
+ * Quotes a value for use inside a PostgREST `column.in.(...)` filter string,
+ * escaping embedded backslashes and double quotes.
+ */
+function quotePostgrestIn(value: string): string {
+  return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+}
 
 // ─── Internal type alias ───────────────────────────────────────────────────────
 
@@ -39,7 +48,17 @@ function applyFilters(query: FilterBuilder, filters: ParsedFilters): FilterBuild
     query = query.in('category', filters.category);
   }
   if (filters.league.length > 0) {
-    query = query.in('league', filters.league);
+    // The NO_LEAGUE_VALUE sentinel means "league IS NULL"; real codes use IN.
+    const hasNull = filters.league.includes(NO_LEAGUE_VALUE);
+    const realLeagues = filters.league.filter((v) => v !== NO_LEAGUE_VALUE);
+    if (hasNull && realLeagues.length > 0) {
+      const inList = realLeagues.map(quotePostgrestIn).join(',');
+      query = query.or(`league.is.null,league.in.(${inList})`);
+    } else if (hasNull) {
+      query = query.is('league', null);
+    } else {
+      query = query.in('league', realLeagues);
+    }
   }
   if (filters.place.length > 0) {
     query = query.in('place', filters.place);

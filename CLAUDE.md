@@ -61,6 +61,8 @@ data fetch). `buildStatsQuery`, `buildDistinctValuesQuery`, and the entire `stat
 The DB recomputes it whenever `lp`/`pp` change. It is in `FORBIDDEN_UPDATE_FIELDS` alongside `id` and
 `created_at` — never send it in an update/insert; it will be rejected. The row shape is duplicated in
 `server/src/types/index.ts` (`TimestampRow`) and `client/src/types/index.ts` (`Timestamp`); keep them in sync.
+`league` is **nullable** (`string | null`): an empty league in an edit/insert is stored as `NULL` (validation
+accepts `null`/empty *before* the string-type check), and the table renders it as "—".
 
 ### Single-port production model
 
@@ -99,8 +101,14 @@ errors before touching the DB. Writes then run sequentially as deletes → updat
 
 - **Filter state lives in the URL** (`client/src/hooks/useUrlState.ts`) via react-router `useSearchParams`
   (with `replace: true` to avoid history spam), so views are shareable/bookmarkable.
-- **Two-stage filters:** the `filters` the user edits in the UI are *pending*; they only drive API calls
-  once copied into `appliedFilters` when the user clicks "Vyhledat" (Search). See `App.tsx`.
+- **Instant filtering:** the URL-backed `filters` drive the data/stats/graph hooks directly in `App.tsx`
+  (no Search button) — every filter change applies immediately. Filter changes are discrete selections,
+  so no debounce; only autocomplete *suggestion* lookups are debounced (in `useDistinctValues`).
+- **No-league filter:** the league filter accepts a sentinel value `NO_LEAGUE_VALUE` (`'__none__'`,
+  shown as "—") meaning *league IS NULL*. It flows through the URL/API unchanged; `queryBuilder.applyFilters`
+  turns it into an `IS NULL` (or `.or(league.is.null,...)`) condition, and the stats/graph RPCs special-case
+  the same literal. Keep the constant in sync across `client/src/constants.ts`, `server/src/types/index.ts`,
+  and both `.sql` files.
 - **`COLUMN_DEFINITIONS` in `client/src/constants.ts` drives the entire table** — headers, cell formatting,
   sort toggles, click-to-filter, and visibility. Add/reorder/rename columns there, not in components.
 - **Inline editing** (`DataTable.tsx` + `EditableCell.tsx`) keeps all edits as string drafts (`draftRows`,

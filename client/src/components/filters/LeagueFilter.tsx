@@ -2,16 +2,23 @@ import { useState, useRef, useEffect } from 'react';
 import { useDistinctValues } from '../../hooks/useDistinctValues';
 import { useLeaguePairs } from '../../hooks/useLeaguePairs';
 import { LoadingSpinner } from '../common/LoadingSpinner';
+import { NO_LEAGUE_VALUE } from '../../constants';
 
 interface LeagueFilterProps {
   selectedValues: string[];
   onToggle: (value: string) => void;
 }
 
+/** Human-readable label for a league filter value (the no-league sentinel → "—"). */
+function leagueLabel(value: string): string {
+  return value === NO_LEAGUE_VALUE ? '—' : value;
+}
+
 export function LeagueFilter({ selectedValues, onToggle }: LeagueFilterProps): React.JSX.Element {
   const [search, setSearch] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   // All distinct league values from the server (filtered by search term)
   const { values: serverValues, isLoading } = useDistinctValues('league', '');
   // Pair map: short code → full name (fetched once)
@@ -40,6 +47,14 @@ export function LeagueFilter({ selectedValues, onToggle }: LeagueFilterProps): R
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
 
+  // On select: toggle, clear the search text, close and unfocus the input.
+  function handleSelect(value: string): void {
+    onToggle(value);
+    setSearch('');
+    setIsOpen(false);
+    inputRef.current?.blur();
+  }
+
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-xs font-semibold uppercase tracking-wide text-surface-400">
@@ -48,6 +63,7 @@ export function LeagueFilter({ selectedValues, onToggle }: LeagueFilterProps): R
 
       <div ref={containerRef} className="relative">
         <input
+          ref={inputRef}
           type="text"
           value={search}
           onChange={(e) => {
@@ -67,10 +83,10 @@ export function LeagueFilter({ selectedValues, onToggle }: LeagueFilterProps): R
                 type="button"
                 onClick={() => onToggle(value)}
                 aria-pressed={true}
-                title={pairMap.get(value) ?? value}
+                title={value === NO_LEAGUE_VALUE ? 'Bez ligy' : pairMap.get(value) ?? value}
                 className="rounded-md px-2.5 py-1 text-xs font-medium transition-colors bg-primary-600 text-white hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
               >
-                {value}
+                {leagueLabel(value)}
               </button>
             ))}
           </div>
@@ -78,16 +94,36 @@ export function LeagueFilter({ selectedValues, onToggle }: LeagueFilterProps): R
 
         {isOpen && (
           <div className="absolute z-50 mt-1 w-full rounded-md border border-surface-600 bg-surface-800 p-2 shadow-lg">
-            {isLoading ? (
-              <div className="flex items-center gap-2 py-1">
-                <LoadingSpinner size="sm" />
-                <span className="text-xs text-surface-500">Načítání…</span>
-              </div>
-            ) : values.length === 0 ? (
-              <p className="text-xs text-surface-500">Nebyly nalezeny žádné ligy</p>
-            ) : (
-              <div className="flex max-h-72 flex-wrap gap-1.5 overflow-y-auto">
-                {values.map((value) => {
+            <div className="flex max-h-72 flex-wrap gap-1.5 overflow-y-auto">
+              {/* No-league filter: selects rows whose league is empty/NULL. */}
+              <button
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  handleSelect(NO_LEAGUE_VALUE);
+                }}
+                aria-pressed={selectedValues.includes(NO_LEAGUE_VALUE)}
+                title="Bez ligy"
+                className={`
+                  rounded-md px-2.5 py-1 text-xs font-medium transition-colors
+                  focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400
+                  ${selectedValues.includes(NO_LEAGUE_VALUE)
+                    ? 'bg-primary-600 text-white'
+                    : 'bg-surface-700 text-surface-300 hover:bg-surface-600'}
+                `}
+              >
+                —
+              </button>
+
+              {isLoading ? (
+                <div className="flex items-center gap-2 py-1">
+                  <LoadingSpinner size="sm" />
+                  <span className="text-xs text-surface-500">Načítání…</span>
+                </div>
+              ) : values.length === 0 ? (
+                <p className="text-xs text-surface-500 py-1">Nebyly nalezeny žádné ligy</p>
+              ) : (
+                values.map((value) => {
                   const isSelected = selectedValues.includes(value);
                   return (
                     <button
@@ -96,8 +132,7 @@ export function LeagueFilter({ selectedValues, onToggle }: LeagueFilterProps): R
                       onMouseDown={(e) => {
                         // prevent input blur before click registers
                         e.preventDefault();
-                        onToggle(value);
-                        setIsOpen(false);
+                        handleSelect(value);
                       }}
                       aria-pressed={isSelected}
                       title={pairMap.get(value) ?? value}
@@ -112,9 +147,9 @@ export function LeagueFilter({ selectedValues, onToggle }: LeagueFilterProps): R
                       {value}
                     </button>
                   );
-                })}
-              </div>
-            )}
+                })
+              )}
+            </div>
           </div>
         )}
       </div>

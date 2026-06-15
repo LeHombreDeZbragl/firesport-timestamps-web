@@ -8,9 +8,9 @@ import { FilterBar } from './components/filters/FilterBar';
 import { StatsPanel } from './components/stats/StatsPanel';
 import { DataTable } from './components/table/DataTable';
 import { AdminLoginModal } from './components/AdminLoginModal';
-import { DEFAULT_SORT, EMPTY_FILTERS } from './constants';
+import { DEFAULT_SORT } from './constants';
 import { batchSave, isAdminAuthenticated, clearAdminToken, fetchAuthStatus } from './services/api';
-import type { FilterKey, SortConfig, BatchSavePayload, BatchSaveOutcome, Filters } from './types';
+import type { FilterKey, SortConfig, BatchSavePayload, BatchSaveOutcome } from './types';
 
 function App(): React.JSX.Element {
   const [isAdmin, setIsAdmin] = useState(isAdminAuthenticated);
@@ -53,14 +53,10 @@ function App(): React.JSX.Element {
     clearAllFilters,
   } = useUrlState();
 
-  // `appliedFilters` is what actually drives API calls.
-  // It only updates when the user clicks "Vyhledat" or clears all filters.
-  // Initialise from URL so that shared/bookmarked links load data immediately.
-  const [appliedFilters, setAppliedFilters] = useState<Filters>(filters);
-
-  // True when the pending UI filters differ from what was last applied.
-  const filtersChanged = JSON.stringify(filters) !== JSON.stringify(appliedFilters);
-
+  // Filtering is instant: the live URL-backed `filters` drive every API call
+  // directly. Filter changes are discrete selections (chips/toggles), so no
+  // debounce is needed — autocomplete suggestion queries are debounced separately
+  // inside useDistinctValues.
   const {
     rows,
     totalCount,
@@ -71,10 +67,10 @@ function App(): React.JSX.Element {
     loadMore,
     retry,
     reload,
-  } = useTimestamps(appliedFilters, sort);
+  } = useTimestamps(filters, sort);
 
-  const { stats, isLoading: statsLoading } = useStats(appliedFilters);
-  const { graphStats, isLoading: graphStatsLoading } = useGraphStats(appliedFilters);
+  const { stats, isLoading: statsLoading } = useStats(filters);
+  const { graphStats, isLoading: graphStatsLoading } = useGraphStats(filters);
 
   // Distinct values for edit-mode validation (league, type, category)
   const { values: validLeagues } = useDistinctValues('league', '');
@@ -105,22 +101,12 @@ function App(): React.JSX.Element {
     [removeFilterValue],
   );
 
-  // Apply pending filters to the API — bail out if nothing changed.
-  const handleSearch = useCallback(() => {
-    setAppliedFilters((prev) => {
-      if (JSON.stringify(prev) === JSON.stringify(filters)) return prev;
-      return filters;
-    });
-  }, [filters]);
-
-  // Clear all pending + applied filters, but only if there is something to clear.
+  // Clear all filters, but only if there is something to clear.
   const handleClearAll = useCallback(() => {
-    const hasPending = Object.values(filters).some((arr) => arr.length > 0);
-    const hasApplied = Object.values(appliedFilters).some((arr) => arr.length > 0);
-    if (!hasPending && !hasApplied) return;
+    const hasFilters = Object.values(filters).some((arr) => arr.length > 0);
+    if (!hasFilters) return;
     clearAllFilters();
-    setAppliedFilters(EMPTY_FILTERS);
-  }, [filters, appliedFilters, clearAllFilters]);
+  }, [filters, clearAllFilters]);
 
   const handleBatchSave = useCallback(
     async (payload: BatchSavePayload): Promise<BatchSaveOutcome> => {
@@ -178,9 +164,6 @@ function App(): React.JSX.Element {
             onAddFilter={handleAddFilter}
             onRemoveFilter={handleRemoveFilter}
             onClearAll={handleClearAll}
-            onSearch={handleSearch}
-            filtersChanged={filtersChanged}
-            isSearching={isLoading}
           />
         </div>
 

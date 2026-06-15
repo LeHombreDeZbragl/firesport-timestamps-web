@@ -42,7 +42,7 @@ export function AutocompleteFilter({
       }
       setInputValue('');
       setIsOpen(false);
-      inputRef.current?.focus();
+      inputRef.current?.blur();
     },
     [selectedValues, onAdd],
   );

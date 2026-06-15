@@ -5,6 +5,20 @@ import type { ColumnDefinition, Filters, SortConfig, Timestamp } from './types/i
 
 export const PAGE_SIZE = 50;
 
+// ─── Source links ────────────────────────────────────────────────────────────────
+//
+// The DB stores only the path fragment of a result link (e.g.
+// "vysledek-dolni-hradiste-14484.html"). The full source URL is built by
+// prefixing this base.
+export const FIRESPORT_LINK_BASE = 'https://www.firesport.eu/';
+
+// ─── No-league filter sentinel ───────────────────────────────────────────────────
+//
+// Reserved value used in the league filter to select rows whose league is NULL.
+// Flows through the URL/API as a normal filter value; the server translates it
+// into an IS NULL condition. Displayed to users as an em dash ("—").
+export const NO_LEAGUE_VALUE = '__none__';
+
 // ─── Default state ─────────────────────────────────────────────────────────────
 
 export const DEFAULT_SORT: SortConfig = {
@@ -146,7 +160,7 @@ export const COLUMN_DEFINITIONS: ColumnDefinition[] = [
     label: 'Link',
     filterable: false,
     sortable: false,
-    defaultVisible: false,
+    defaultVisible: true,
   },
   {
     key: 'created_at',

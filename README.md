@@ -18,7 +18,7 @@ A full-stack web application for browsing Czech firesport attack results. Filter
 ## Prerequisites
 
 - Node.js ≥ 18
-- A Supabase project with the `public.timestamps` table and the `get_distinct_attack_years()` RPC function (see [sql/](#sql))
+- A Supabase project with the `public.timestamps` table and the RPC functions in `server/sql/` applied (see [step 3](#3-apply-the-supabase-sql-functions))
 
 ---
 
@@ -50,9 +50,13 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
 
 > **Security**: The service-role key bypasses Row Level Security. Keep it server-side only — it is never sent to the browser.
 
-### 3. Apply the Supabase SQL function
+### 3. Apply the Supabase SQL functions
 
-Run the contents of `server/sql/get_distinct_attack_years.sql` in your Supabase project's SQL editor. This creates the `get_distinct_attack_years()` RPC used by the year filter.
+Stats, charts, and the autocomplete/year/league filters are powered by PostgreSQL RPC functions that
+are **not** auto-migrated. Run each file in `server/sql/` in your Supabase project's SQL editor:
+`get_distinct_attack_years.sql`, `get_distinct_column_values.sql`, `get_distinct_league_pairs.sql`,
+`get_timestamps_stats.sql`, `get_timestamps_graph_stats.sql` (plus `add_final_time_column.sql` if the
+generated column is missing). Whenever you change one of these `.sql` files, re-run it in Supabase.
 
 ---
 
@@ -108,7 +112,7 @@ All endpoints are under `/api/timestamps`.
 | `team` | `Jistebník,Bělá` | Comma-separated team names |
 | `category` | `A` | Comma-separated categories |
 | `year` | `2025,2024` | Comma-separated years |
-| `league` | `MČR` | Comma-separated leagues |
+| `league` | `MČR` | Comma-separated leagues; the value `__none__` matches rows with no league (NULL) |
 | `place` | `Praha` | Comma-separated places |
 | `attack_type` | `PS` | Comma-separated attack types |
 | `sort` | `lp` | Column to sort by |

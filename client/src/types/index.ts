@@ -11,7 +11,7 @@ export interface Timestamp {
   id: number;
   created_at: string;        // ISO timestamp string
   attack_date: string;       // "YYYY-MM-DD"
-  league: string;
+  league: string | null;     // nullable — empty league allowed
   place: string;
   placement: number;
   link: string;
