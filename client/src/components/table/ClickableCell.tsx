@@ -42,7 +42,7 @@ export function ClickableCell({
   // Filterable column: clickable to add filter
   if (columnDef.filterable && columnDef.filterKey && value !== null && value !== undefined) {
     const filterKey = columnDef.filterKey;
-    const strValue = String(value);
+    const strValue = columnDef.filterValue ? columnDef.filterValue(value) : String(value);
     return (
       <td
         className={`cursor-pointer overflow-x-auto whitespace-nowrap px-3 py-2 text-sm text-surface-200 hover:bg-primary-700/50 hover:text-primary-100 transition-colors${strikethroughClass}`}

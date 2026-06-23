@@ -1,6 +1,7 @@
 {
   "name": "firesport-timestamps",
   "private": true,
+  "license": "UNLICENSED",
   "workspaces": [
     "client",
     "server"

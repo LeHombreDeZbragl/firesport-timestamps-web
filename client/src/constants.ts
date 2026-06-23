@@ -126,7 +126,11 @@ export const COLUMN_DEFINITIONS: ColumnDefinition[] = [
   {
     key: 'attack_date',
     label: 'Datum',
-    filterable: false,
+    // Clicking a date filters by its year only (the year filter is the closest
+    // match — there is no exact-date filter). filterValue extracts the year.
+    filterable: true,
+    filterKey: 'year',
+    filterValue: (value) => (typeof value === 'string' ? value.split('-')[0] : ''),
     sortable: true,
     sortColumn: 'attack_date',
     defaultVisible: true,

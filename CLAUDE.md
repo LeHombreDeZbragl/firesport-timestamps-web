@@ -132,3 +132,8 @@ deliberately does **not** ping the DB.
 Deployed to **Fly.io** (`fly.toml`, region `fra`, port 8080, autostop/autostart, health-checks `/api/health`)
 via the multi-stage `Dockerfile` (builder compiles both workspaces; production image installs only the
 server's prod deps and copies `server/dist` + `client/dist`). `fly deploy` builds and ships the Dockerfile.
+
+**Pushing to `main` auto-deploys to production.** `.github/workflows/fly-deploy.yml` runs
+`flyctl deploy --remote-only` on every push to `main` (build runs on Fly's remote builders). There is no
+staging environment and no manual approval gate — a merge to `main` ships live. Branch and open a PR for
+anything you don't want deployed immediately.

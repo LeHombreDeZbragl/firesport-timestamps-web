@@ -85,6 +85,13 @@ export interface ColumnDefinition {
    * Must be set when `filterable` is true.
    */
   filterKey?: FilterKey;
+  /**
+   * Optional transform mapping the raw cell value to the value sent to the
+   * filter. Defaults to `String(value)`. Use it when the displayed/stored cell
+   * value differs from what should be filtered — e.g. the `attack_date` cell
+   * holds a full "YYYY-MM-DD" date but filters by year only.
+   */
+  filterValue?: (value: Timestamp[keyof Timestamp]) => string;
   /** Whether the column is sortable (has a sort toggle in the header). */
   sortable: boolean;
   /**
