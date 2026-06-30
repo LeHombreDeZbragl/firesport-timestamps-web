@@ -26,8 +26,13 @@ interface SortableHeaderProps {
 
 type SortState = 'asc' | 'desc' | 'none';
 
-function nextSortState(current: SortState): SortState {
-  if (current === 'none') return 'asc';
+function nextSortState(current: SortState, columnKey?: string): SortState {
+  // Date sorts newest-first by default, so its first click goes straight to 'desc'.
+  if (current === 'none') return columnKey === 'attack_date' ? 'desc' : 'asc';
+  if (columnKey === 'attack_date') {
+    if (current === 'desc') return 'asc';
+    return 'none';
+  }
   if (current === 'asc') return 'desc';
   return 'none';
 }
@@ -61,7 +66,7 @@ export function SortableHeader({
 
   function handleSortClick(): void {
     if (!sortable || !columnKey) return;
-    const next = nextSortState(currentState);
+    const next = nextSortState(currentState, columnKey);
     if (next === 'none') {
       onSortChange(null);
     } else {

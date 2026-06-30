@@ -133,7 +133,7 @@ function App(): React.JSX.Element {
             href="/"
             className="inline-block text-xl font-bold tracking-tight text-white hover:text-primary-300 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 rounded"
           >
-            Firesport Timestamps
+            Firesport Times
           </a>
           {adminAvailable && !isAdmin && (
             <button
