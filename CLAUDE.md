@@ -102,6 +102,14 @@ partial writes can't happen. The RPC is the atomicity guarantee only; all values
 in Node first. Its fixed editable-column whitelist must stay in sync with `ALL_EDITABLE_FIELDS` in
 `server/src/middleware/validation.ts`. The single `PATCH`/`DELETE /:id` routes still exist for one-off edits.
 
+**Curated vocabulary (by design):** the batch endpoint rejects any `league` / `category` /
+`attack_type` value not already present in the DB's distinct sets — so **new values for these three
+columns cannot be introduced through the UI**. This is intentional (keeps the vocabulary clean), not a
+bug. An admin who hits it sees a per-field Czech error (`Liga "X" neexistuje.` / `Kategorie "X"
+neexistuje.` / `Typ "X" neexistuje.`). To add a genuinely new league/category/attack_type, insert a
+row with that value directly in Supabase (or relax the check in `routes/timestamps.ts`), then it
+becomes available in the UI. `link` is also hardened server-side: empty, or an http(s) URL ≤ 500 chars.
+
 ### Client state model
 
 - **Filter state lives in the URL** (`client/src/hooks/useUrlState.ts`) via react-router `useSearchParams`
@@ -125,12 +133,17 @@ Client state uses camelCase (`attackType`); the DB columns, URL query params, an
 snake_case (`attack_type`). The mappings live in `client/src/constants.ts`
 (`URL_PARAM_TO_FILTER_KEY` / `FILTER_KEY_TO_URL_PARAM`). When adding a filter, update both maps.
 
-### Server hardening (`server/src/index.ts`)
+### Server hardening (`server/src/app.ts`)
 
-`helmet`, global rate limit (200 req/min/IP on `/api`), `trust proxy = 1` (for correct client IPs behind
-Fly/Nginx), `pino` request logging with a per-request `X-Request-Id` (health checks excluded from logs),
-a catch-all error handler that hides internals, and SIGTERM/SIGINT graceful shutdown. `/api/health`
-deliberately does **not** ping the DB.
+The Express app is built in `server/src/app.ts` (exported without a listener so tests can mount it with
+supertest); `server/src/index.ts` just validates `PORT`, calls `app.listen`, and wires graceful
+shutdown. Hardening in `app.ts`: `helmet`, global rate limit (200 req/min/IP on `/api`, disabled under
+`NODE_ENV=test`), `trust proxy = 1` (for correct client IPs behind Fly/Nginx), `pino` request logging
+with a per-request `X-Request-Id` (health checks excluded from logs), a catch-all error handler that
+hides internals, and (in `index.ts`) SIGTERM/SIGINT graceful shutdown. Async route handlers are wrapped
+in `asyncHandler` (`server/src/middleware/asyncHandler.ts`) so a rejected promise reaches the error
+handler instead of hanging the socket. Unknown `/api/*` paths return a JSON 404 before the SPA fallback.
+`/api/health` deliberately does **not** ping the DB.
 
 ## Deployment
 
@@ -138,7 +151,19 @@ Deployed to **Fly.io** (`fly.toml`, region `fra`, port 8080, autostop/autostart,
 via the multi-stage `Dockerfile` (builder compiles both workspaces; production image installs only the
 server's prod deps and copies `server/dist` + `client/dist`). `fly deploy` builds and ships the Dockerfile.
 
-**Pushing to `main` auto-deploys to production.** `.github/workflows/fly-deploy.yml` runs
-`flyctl deploy --remote-only` on every push to `main` (build runs on Fly's remote builders). There is no
-staging environment and no manual approval gate — a merge to `main` ships live. Branch and open a PR for
-anything you don't want deployed immediately.
+**Pushing to `main` auto-deploys to production.** `.github/workflows/fly-deploy.yml` first runs a
+`test` job (`npm ci && npm test` — the DB-free server suite, no secrets), and the `deploy` job
+`needs: test`, so a failing test blocks the deploy. If tests pass, `flyctl deploy --remote-only` builds
+on Fly's remote builders and ships. There is no staging environment and no manual approval gate — a
+green merge to `main` ships live. Branch and open a PR for anything you don't want deployed immediately.
+
+### Accepted operational limitations
+
+- **No automated backups.** The Supabase project is on the free plan (no PITR / automated backups).
+  Manual fallback only: `./scripts/backup.sh` (`pg_dump` → `backups/*.sql.gz`). Accepted at current scale.
+- **In-memory rate limiting.** The login limiter (5/15 min) and global `/api` limiter (200/min) live in
+  process memory — they reset on every deploy/restart and are **per-Fly-machine**, so they don't span
+  multiple machines. Acceptable for a single-admin tool at current scale; revisit with a shared store
+  (e.g. Redis) if it ever runs multi-machine or needs to survive restarts.
+- **No JWT revocation.** Admin tokens are valid for their full 8h expiry; there's no server-side logout
+  invalidation. Accepted for a single-admin tool.

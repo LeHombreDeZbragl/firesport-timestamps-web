@@ -63,8 +63,14 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error: unknown) => {
     if (axios.isAxiosError(error) && error.response?.status === 401) {
-      clearAdminToken();
-      window.dispatchEvent(new CustomEvent('admin-auth-required'));
+      // Skip auth endpoints: a wrong-password login legitimately returns 401 and
+      // AdminLoginModal surfaces that itself — reacting here would clear tokens
+      // and reopen the modal spuriously (and could loop on the login request).
+      const url = error.config?.url ?? '';
+      if (!url.includes('/auth/')) {
+        clearAdminToken();
+        window.dispatchEvent(new CustomEvent('admin-auth-required'));
+      }
     }
     return Promise.reject(error);
   },
@@ -75,7 +81,7 @@ apiClient.interceptors.response.use(
  * The client uses this to decide whether to show the "Admin login" button.
  */
 export async function fetchAuthStatus(): Promise<boolean> {
-  const response: AxiosResponse<{ adminEnabled: boolean }> = await axios.get('/api/auth/status');
+  const response: AxiosResponse<{ adminEnabled: boolean }> = await apiClient.get('/auth/status');
   return response.data.adminEnabled;
 }
 
@@ -242,7 +248,7 @@ export async function batchSave(payload: BatchSavePayload): Promise<BatchSaveOut
  * Throws with a user-facing message on failure.
  */
 export async function login(password: string): Promise<void> {
-  const response: AxiosResponse<{ token: string }> = await axios.post('/api/auth/login', {
+  const response: AxiosResponse<{ token: string }> = await apiClient.post('/auth/login', {
     password,
   });
   setAdminToken(response.data.token);

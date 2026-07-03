@@ -199,6 +199,18 @@ const PLACEMENT_MAX = 999;
 const LP_PP_MIN = 12.01;
 const LP_PP_MAX = 99.99;
 
+// `link` is admin-only and rendered as an href only when it starts with "http"
+// (client/src/components/table/ClickableCell.tsx), but harden it server-side too:
+// allow empty, otherwise require an http(s) URL within a sane length cap.
+const LINK_MAX_LENGTH = 500;
+const URL_PREFIX_REGEX = /^https?:\/\//i;
+
+/** True if `link` is empty or a length-capped http(s) URL. */
+function isAcceptableLink(value: string): boolean {
+  if (value.trim() === '') return true;
+  return value.length <= LINK_MAX_LENGTH && URL_PREFIX_REGEX.test(value);
+}
+
 /**
  * Parses and validates the request body for PATCH /api/timestamps/:id.
  * Rejects forbidden fields (id, created_at, final_time), unknown fields,
@@ -283,6 +295,9 @@ export function parseUpdateBody(
       if (key !== 'link' && value.trim() === '') {
         return { valid: false, error: `Field "${key}" cannot be empty.` };
       }
+      if (key === 'link' && !isAcceptableLink(value)) {
+        return { valid: false, error: `Field "link" must be an http(s) URL (max ${LINK_MAX_LENGTH} characters) or empty.` };
+      }
       data[key] = value;
     }
   }
@@ -365,6 +380,10 @@ function validateBatchField(
   }
   if (key !== 'link' && value.trim() === '') {
     errors.push({ rowRef, field: key, message: 'Pole nesmí být prázdné.' });
+    return undefined;
+  }
+  if (key === 'link' && !isAcceptableLink(value)) {
+    errors.push({ rowRef, field: key, message: `Odkaz musí být platná http(s) adresa (max ${LINK_MAX_LENGTH} znaků) nebo prázdný.` });
     return undefined;
   }
   return value;

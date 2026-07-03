@@ -122,6 +122,15 @@ describe('parseUpdateBody', () => {
     expect(parseUpdateBody({ link: '' })).toEqual({ valid: true, data: { link: '' } });
     expect(parseUpdateBody({ team: '  ' }).valid).toBe(false);
   });
+  it('accepts an http(s) link and rejects non-URLs / over-length links', () => {
+    expect(parseUpdateBody({ link: 'https://example.com/x' })).toEqual({
+      valid: true,
+      data: { link: 'https://example.com/x' },
+    });
+    expect(parseUpdateBody({ link: 'javascript:alert(1)' }).valid).toBe(false);
+    expect(parseUpdateBody({ link: 'example.com' }).valid).toBe(false);
+    expect(parseUpdateBody({ link: `https://e.com/${'a'.repeat(500)}` }).valid).toBe(false);
+  });
 });
 
 describe('parseBatchBody', () => {
@@ -176,5 +185,14 @@ describe('parseBatchBody', () => {
     const r = parseBatchBody({ updates: [], inserts: [noLeague], deletes: [] });
     expect(r.valid).toBe(true);
     if (r.valid) expect(r.data.inserts[0].league).toBeNull();
+  });
+  it('flags a non-URL link on insert', () => {
+    const r = parseBatchBody({
+      updates: [],
+      inserts: [{ ...validInsert, link: 'not-a-url' }],
+      deletes: [],
+    });
+    expect(r.valid).toBe(true);
+    if (r.valid) expect(r.fieldErrors.some((e) => e.field === 'link')).toBe(true);
   });
 });
