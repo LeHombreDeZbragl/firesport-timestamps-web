@@ -3,6 +3,7 @@ import supabase from '../services/supabaseClient';
 import logger from '../services/logger';
 import { buildTimestampsQuery } from '../services/queryBuilder';
 import { requireAdmin } from '../middleware/adminAuth';
+import { asyncHandler } from '../middleware/asyncHandler';
 import {
   parseFilters,
   parseSort,
@@ -38,7 +39,7 @@ const router = Router();
 //   limit      — integer 1-50, default 50
 //   offset     — integer ≥ 0, default 0
 //
-router.get('/', async (req: Request, res: Response): Promise<void> => {
+router.get('/', asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const filters = parseFilters(req.query);
   const sort = parseSort(req.query);
   const pagination = parsePagination(req.query);
@@ -64,7 +65,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
   };
 
   res.json(response);
-});
+}));
 
 // ─── GET /api/timestamps/stats ─────────────────────────────────────────────────
 //
@@ -72,7 +73,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
 // Delegates to the `get_timestamps_stats` Supabase RPC so that statistics are
 // computed over the full dataset (not capped by Supabase's JS row limit).
 //
-router.get('/stats', async (req: Request, res: Response): Promise<void> => {
+router.get('/stats', asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const filters = parseFilters(req.query);
 
   const { data, error } = await supabase.rpc('get_timestamps_stats', {
@@ -117,7 +118,7 @@ router.get('/stats', async (req: Request, res: Response): Promise<void> => {
   };
 
   res.json(stats);
-});
+}));
 
 // ─── GET /api/timestamps/graph-stats ─────────────────────────────────────────
 //
@@ -125,7 +126,7 @@ router.get('/stats', async (req: Request, res: Response): Promise<void> => {
 // progression series (avg & min per NTILE group).
 // Accepts the same filter query params as /stats.
 //
-router.get('/graph-stats', async (req: Request, res: Response): Promise<void> => {
+router.get('/graph-stats', asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const filters = parseFilters(req.query);
 
   const { data, error } = await supabase.rpc('get_timestamps_graph_stats', {
@@ -174,7 +175,7 @@ router.get('/graph-stats', async (req: Request, res: Response): Promise<void> =>
   };
 
   res.json(graphStats);
-});
+}));
 
 // ─── GET /api/timestamps/distinct/years ────────────────────────────────────────
 //
@@ -184,7 +185,7 @@ router.get('/graph-stats', async (req: Request, res: Response): Promise<void> =>
 // The RPC function `get_distinct_attack_years` must be created in Supabase;
 // the SQL migration is provided in server/sql/get_distinct_attack_years.sql.
 //
-router.get('/distinct/years', async (_req: Request, res: Response): Promise<void> => {
+router.get('/distinct/years', asyncHandler(async (_req: Request, res: Response): Promise<void> => {
   const { data, error } = await supabase.rpc('get_distinct_attack_years');
 
   if (error) {
@@ -194,17 +195,18 @@ router.get('/distinct/years', async (_req: Request, res: Response): Promise<void
   }
 
   // RPC returns an array of objects: [{ year: 2025 }, { year: 2024 }, ...]
-  const years: number[] = (data as Array<{ year: number }>).map((row) => row.year);
+  const rows = (data as Array<{ year: number }> | null) ?? [];
+  const years: number[] = rows.map((row) => row.year);
   const response: DistinctYearsResponse = { years };
   res.json(response);
-});
+}));
 
 // ─── GET /api/timestamps/distinct/league-pairs ─────────────────────────────────
 //
 // Returns distinct (league short code, full league name) pairs.
 // Used by the LeagueFilter for tooltips and long-name search.
 //
-router.get('/distinct/league-pairs', async (_req: Request, res: Response): Promise<void> => {
+router.get('/distinct/league-pairs', asyncHandler(async (_req: Request, res: Response): Promise<void> => {
   const { data, error } = await supabase.rpc('get_distinct_league_pairs');
 
   if (error) {
@@ -213,13 +215,14 @@ router.get('/distinct/league-pairs', async (_req: Request, res: Response): Promi
     return;
   }
 
-  const pairs = (data as Array<{ short_name: string; full_name: string }>).map((row) => ({
+  const rows = (data as Array<{ short_name: string; full_name: string }> | null) ?? [];
+  const pairs = rows.map((row) => ({
     short: row.short_name,
     full: row.full_name,
   }));
   const response: LeaguePairsResponse = { pairs };
   res.json(response);
-});
+}));
 
 // ─── GET /api/timestamps/distinct/:column ──────────────────────────────────────
 //
@@ -232,7 +235,7 @@ router.get('/distinct/league-pairs', async (_req: Request, res: Response): Promi
 router.get(
   '/distinct/:column',
   validateAutocompleteColumn,
-  async (req: Request, res: Response): Promise<void> => {
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const column = asAutocompleteColumn(req.params['column'] as string);
     const searchTerm = parseSearchTerm(req.query);
 
@@ -247,10 +250,11 @@ router.get(
       return;
     }
 
-    const values: string[] = (data as Array<{ value: string }>).map((row) => row.value);
+    const rows = (data as Array<{ value: string }> | null) ?? [];
+    const values: string[] = rows.map((row) => row.value);
     const response: DistinctValuesResponse = { values };
     res.json(response);
-  }
+  })
 );
 // ─── PATCH /api/timestamps/:id ─────────────────────────────────────────────────────
 //
@@ -260,7 +264,7 @@ router.get(
 //   - `final_time` is a GENERATED ALWAYS AS STORED column; the database
 //     recomputes it automatically whenever `lp` or `pp` changes.
 //
-router.patch('/:id', requireAdmin, async (req: Request, res: Response): Promise<void> => {
+router.patch('/:id', requireAdmin, asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const id = parseId(req.params['id']);
   if (id === null) {
     res.status(400).json({ error: 'Invalid id. Must be a positive integer.' });
@@ -291,13 +295,13 @@ router.patch('/:id', requireAdmin, async (req: Request, res: Response): Promise<
   }
 
   res.json(data);
-});
+}));
 // ─── DELETE /api/timestamps/:id ────────────────────────────────────────────────
 //
 // Deletes a single timestamp row by its numeric id.
 // Intended for debugging/admin purposes.
 //
-router.delete('/:id', requireAdmin, async (req: Request, res: Response): Promise<void> => {
+router.delete('/:id', requireAdmin, asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const id = parseId(req.params['id']);
 
   if (id === null) {
@@ -317,7 +321,7 @@ router.delete('/:id', requireAdmin, async (req: Request, res: Response): Promise
   }
 
   res.status(204).send();
-});
+}));
 
 // ─── POST /api/timestamps/batch ────────────────────────────────────────────────
 //
@@ -326,7 +330,7 @@ router.delete('/:id', requireAdmin, async (req: Request, res: Response): Promise
 // If validation fails, returns 400 with per-field errors. If any write fails
 // after validation passes, returns 500.
 //
-router.post('/batch', requireAdmin, async (req: Request, res: Response): Promise<void> => {
+router.post('/batch', requireAdmin, asyncHandler(async (req: Request, res: Response): Promise<void> => {
   // 1. Structural + field-level validation
   const parsed = parseBatchBody(req.body);
   if (!parsed.valid) {
@@ -416,6 +420,6 @@ router.post('/batch', requireAdmin, async (req: Request, res: Response): Promise
     logger.error({ err }, 'POST /api/timestamps/batch — write error');
     res.status(500).json({ error: 'Failed to save batch changes.' });
   }
-});
+}));
 
 export default router;
