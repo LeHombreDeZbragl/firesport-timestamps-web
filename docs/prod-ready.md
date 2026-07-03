@@ -335,8 +335,10 @@ purely making the repo a complete source of truth.
 - Express 5 upgrade (W1 wrapper covers the need).
 - Distributed / shared-store rate limiting (in-memory accepted at current scale — documented).
 - Server-side JWT revocation / logout invalidation (8h expiry accepted for single-admin tool).
-- `count: 'exact'` → `estimated` on the paginated read. Not a problem at current data size; revisit
-  only if the table grows large enough that per-page count scans hurt.
+- ~~`count: 'exact'` → `estimated` on the paginated read.~~ **Done** (the table reached ~250k rows).
+  `buildTimestampsQuery` now uses an estimated count and fetches `limit + 1` rows so `hasMore` stays
+  exact; the route also caches the unfiltered stats/graph/distinct responses (60s TTL, cleared on
+  writes) via `server/src/services/cache.ts`.
 - Client-side test coverage (focused API tests only, per scope).
 - Automated backups (free-plan limitation, accepted).
 

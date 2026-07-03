@@ -4,6 +4,7 @@ import logger from '../services/logger';
 import { buildTimestampsQuery } from '../services/queryBuilder';
 import { requireAdmin } from '../middleware/adminAuth';
 import { asyncHandler } from '../middleware/asyncHandler';
+import { getCached, setCached, clearCache } from '../services/cache';
 import {
   parseFilters,
   parseSort,
@@ -16,6 +17,7 @@ import {
   parseBatchBody,
 } from '../middleware/validation';
 import {
+  type ParsedFilters,
   type TimestampsResponse,
   type StatsResponse,
   type GraphStatsResponse,
@@ -26,6 +28,25 @@ import {
 } from '../types/index';
 
 const router = Router();
+
+// TTL for cached read responses. Data changes only on admin writes (which call
+// clearCache), so this only bounds staleness if a write somehow doesn't — and it
+// absorbs bursts of identical requests (e.g. everyone loading the default view
+// at launch) into a single DB round-trip. See services/cache.ts.
+const CACHE_TTL_MS = 300_000;
+
+/** True when no filter is active — i.e. the default (whole-table) view, the
+ *  most-requested and most-expensive case, so its aggregates are cacheable. */
+function hasNoFilters(f: ParsedFilters): boolean {
+  return (
+    f.team.length === 0 &&
+    f.category.length === 0 &&
+    f.year.length === 0 &&
+    f.league.length === 0 &&
+    f.place.length === 0 &&
+    f.attackType.length === 0
+  );
+}
 
 // ─── GET /api/timestamps ───────────────────────────────────────────────────────
 //
@@ -57,11 +78,21 @@ router.get('/', asyncHandler(async (req: Request, res: Response): Promise<void> 
     return;
   }
 
-  const totalCount = count ?? 0;
+  // buildTimestampsQuery fetches limit + 1 rows: a full extra row means more
+  // pages exist. Slice the sentinel off so the client only sees `limit` rows.
+  const rows = data ?? [];
+  const hasMore = rows.length > pagination.limit;
+  const pageRows = hasMore ? rows.slice(0, pagination.limit) : rows;
+
+  // The count is an estimate (see queryBuilder). Never report fewer than what
+  // we've actually loaded; when we've reached the end, the total is exact.
+  const loadedThrough = pagination.offset + pageRows.length;
+  const totalCount = hasMore ? Math.max(count ?? 0, loadedThrough + 1) : loadedThrough;
+
   const response: TimestampsResponse = {
-    data: data ?? [],
+    data: pageRows,
     totalCount,
-    hasMore: pagination.offset + pagination.limit < totalCount,
+    hasMore,
   };
 
   res.json(response);
@@ -75,6 +106,16 @@ router.get('/', asyncHandler(async (req: Request, res: Response): Promise<void> 
 //
 router.get('/stats', asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const filters = parseFilters(req.query);
+
+  // The unfiltered (default-view) aggregate is the hot path — cache it.
+  const cacheable = hasNoFilters(filters);
+  if (cacheable) {
+    const hit = getCached<StatsResponse>('stats:all');
+    if (hit) {
+      res.json(hit);
+      return;
+    }
+  }
 
   const { data, error } = await supabase.rpc('get_timestamps_stats', {
     p_team:        filters.team.length        > 0 ? filters.team        : null,
@@ -93,30 +134,28 @@ router.get('/stats', asyncHandler(async (req: Request, res: Response): Promise<v
 
   // RPC returns a single row; Supabase wraps it in an array.
   const row = Array.isArray(data) ? data[0] : data;
-  if (!row) {
-    res.json({
-      averageTime: null, bestTime: null, medianTime: null,
-      lpFasterCount: 0, ppFasterCount: 0, equalCount: 0, totalCount: 0,
-      successfulCount: 0, unsuccessfulCount: 0,
-      avgLp: null, avgPp: null,
-    });
-    return;
-  }
+  const stats: StatsResponse = row
+    ? {
+        averageTime:       row.average_time       ?? null,
+        bestTime:          row.best_time          ?? null,
+        medianTime:        row.median_time        ?? null,
+        lpFasterCount:     Number(row.lp_faster        ?? 0),
+        ppFasterCount:     Number(row.pp_faster        ?? 0),
+        equalCount:        Number(row.equal_count       ?? 0),
+        totalCount:        Number(row.total_count       ?? 0),
+        successfulCount:   Number(row.successful_count  ?? 0),
+        unsuccessfulCount: Number(row.unsuccessful_count ?? 0),
+        avgLp:             row.avg_lp ?? null,
+        avgPp:             row.avg_pp ?? null,
+      }
+    : {
+        averageTime: null, bestTime: null, medianTime: null,
+        lpFasterCount: 0, ppFasterCount: 0, equalCount: 0, totalCount: 0,
+        successfulCount: 0, unsuccessfulCount: 0,
+        avgLp: null, avgPp: null,
+      };
 
-  const stats: StatsResponse = {
-    averageTime:       row.average_time       ?? null,
-    bestTime:          row.best_time          ?? null,
-    medianTime:        row.median_time        ?? null,
-    lpFasterCount:     Number(row.lp_faster        ?? 0),
-    ppFasterCount:     Number(row.pp_faster        ?? 0),
-    equalCount:        Number(row.equal_count       ?? 0),
-    totalCount:        Number(row.total_count       ?? 0),
-    successfulCount:   Number(row.successful_count  ?? 0),
-    unsuccessfulCount: Number(row.unsuccessful_count ?? 0),
-    avgLp:             row.avg_lp ?? null,
-    avgPp:             row.avg_pp ?? null,
-  };
-
+  if (cacheable) setCached('stats:all', stats, CACHE_TTL_MS);
   res.json(stats);
 }));
 
@@ -128,6 +167,15 @@ router.get('/stats', asyncHandler(async (req: Request, res: Response): Promise<v
 //
 router.get('/graph-stats', asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const filters = parseFilters(req.query);
+
+  const cacheable = hasNoFilters(filters);
+  if (cacheable) {
+    const hit = getCached<GraphStatsResponse>('graph:all');
+    if (hit) {
+      res.json(hit);
+      return;
+    }
+  }
 
   const { data, error } = await supabase.rpc('get_timestamps_graph_stats', {
     p_team:        filters.team.length        > 0 ? filters.team        : null,
@@ -144,36 +192,34 @@ router.get('/graph-stats', asyncHandler(async (req: Request, res: Response): Pro
     return;
   }
 
-  const row = Array.isArray(data) ? data[0] : data;
-  if (!row) {
-    res.json({
-      distUnder16: 0, dist16To17: 0, dist17To18: 0, distOver18: 0,
-      distUnsuccessful: 0, progression: [],
-    });
-    return;
-  }
-
   type RawProgression = { group: number; avg_time: number; min_time: number; start_date: string; end_date: string; avg_lp: number | null; avg_pp: number | null };
 
-  const graphStats: GraphStatsResponse = {
-    distUnder16:      Number(row.dist_under_16     ?? 0),
-    dist16To17:       Number(row.dist_16_to_17     ?? 0),
-    dist17To18:       Number(row.dist_17_to_18     ?? 0),
-    distOver18:       Number(row.dist_over_18      ?? 0),
-    distUnsuccessful: Number(row.dist_unsuccessful ?? 0),
-    progression: Array.isArray(row.progression)
-      ? (row.progression as RawProgression[]).map((p) => ({
-          group:     p.group,
-          avgTime:   p.avg_time,
-          minTime:   p.min_time,
-          startDate: p.start_date,
-          endDate:   p.end_date,
-          avgLp:     p.avg_lp ?? null,
-          avgPp:     p.avg_pp ?? null,
-        }))
-      : [],
-  };
+  const row = Array.isArray(data) ? data[0] : data;
+  const graphStats: GraphStatsResponse = row
+    ? {
+        distUnder16:      Number(row.dist_under_16     ?? 0),
+        dist16To17:       Number(row.dist_16_to_17     ?? 0),
+        dist17To18:       Number(row.dist_17_to_18     ?? 0),
+        distOver18:       Number(row.dist_over_18      ?? 0),
+        distUnsuccessful: Number(row.dist_unsuccessful ?? 0),
+        progression: Array.isArray(row.progression)
+          ? (row.progression as RawProgression[]).map((p) => ({
+              group:     p.group,
+              avgTime:   p.avg_time,
+              minTime:   p.min_time,
+              startDate: p.start_date,
+              endDate:   p.end_date,
+              avgLp:     p.avg_lp ?? null,
+              avgPp:     p.avg_pp ?? null,
+            }))
+          : [],
+      }
+    : {
+        distUnder16: 0, dist16To17: 0, dist17To18: 0, distOver18: 0,
+        distUnsuccessful: 0, progression: [],
+      };
 
+  if (cacheable) setCached('graph:all', graphStats, CACHE_TTL_MS);
   res.json(graphStats);
 }));
 
@@ -186,6 +232,12 @@ router.get('/graph-stats', asyncHandler(async (req: Request, res: Response): Pro
 // the SQL migration is provided in server/sql/get_distinct_attack_years.sql.
 //
 router.get('/distinct/years', asyncHandler(async (_req: Request, res: Response): Promise<void> => {
+  const cached = getCached<DistinctYearsResponse>('distinct:years');
+  if (cached) {
+    res.json(cached);
+    return;
+  }
+
   const { data, error } = await supabase.rpc('get_distinct_attack_years');
 
   if (error) {
@@ -198,6 +250,7 @@ router.get('/distinct/years', asyncHandler(async (_req: Request, res: Response):
   const rows = (data as Array<{ year: number }> | null) ?? [];
   const years: number[] = rows.map((row) => row.year);
   const response: DistinctYearsResponse = { years };
+  setCached('distinct:years', response, CACHE_TTL_MS);
   res.json(response);
 }));
 
@@ -207,6 +260,12 @@ router.get('/distinct/years', asyncHandler(async (_req: Request, res: Response):
 // Used by the LeagueFilter for tooltips and long-name search.
 //
 router.get('/distinct/league-pairs', asyncHandler(async (_req: Request, res: Response): Promise<void> => {
+  const cached = getCached<LeaguePairsResponse>('distinct:league-pairs');
+  if (cached) {
+    res.json(cached);
+    return;
+  }
+
   const { data, error } = await supabase.rpc('get_distinct_league_pairs');
 
   if (error) {
@@ -221,6 +280,7 @@ router.get('/distinct/league-pairs', asyncHandler(async (_req: Request, res: Res
     full: row.full_name,
   }));
   const response: LeaguePairsResponse = { pairs };
+  setCached('distinct:league-pairs', response, CACHE_TTL_MS);
   res.json(response);
 }));
 
@@ -239,6 +299,17 @@ router.get(
     const column = asAutocompleteColumn(req.params['column'] as string);
     const searchTerm = parseSearchTerm(req.query);
 
+    // Cache only the no-search case (the full list shown when a filter dropdown
+    // first opens) — the common, repeated request. Searches vary too much to cache.
+    const cacheKey = searchTerm === '' ? `distinct:col:${column}` : null;
+    if (cacheKey) {
+      const cached = getCached<DistinctValuesResponse>(cacheKey);
+      if (cached) {
+        res.json(cached);
+        return;
+      }
+    }
+
     const { data, error } = await supabase.rpc('get_distinct_column_values', {
       p_column: column,
       p_search: searchTerm,
@@ -253,6 +324,7 @@ router.get(
     const rows = (data as Array<{ value: string }> | null) ?? [];
     const values: string[] = rows.map((row) => row.value);
     const response: DistinctValuesResponse = { values };
+    if (cacheKey) setCached(cacheKey, response, CACHE_TTL_MS);
     res.json(response);
   })
 );
@@ -294,6 +366,7 @@ router.patch('/:id', requireAdmin, asyncHandler(async (req: Request, res: Respon
     return;
   }
 
+  clearCache(); // row changed — drop cached aggregates/distincts so reads are fresh
   res.json(data);
 }));
 // ─── DELETE /api/timestamps/:id ────────────────────────────────────────────────
@@ -320,6 +393,7 @@ router.delete('/:id', requireAdmin, asyncHandler(async (req: Request, res: Respo
     return;
   }
 
+  clearCache(); // row removed — drop cached aggregates/distincts so reads are fresh
   res.status(204).send();
 }));
 
@@ -408,6 +482,7 @@ router.post('/batch', requireAdmin, asyncHandler(async (req: Request, res: Respo
     return;
   }
 
+  clearCache(); // data changed — drop cached aggregates/distincts so reads are fresh
   res.json({ success: true });
 }));
 

@@ -1,6 +1,7 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import { createChain } from './helpers/supabase';
+import { clearCache } from '../src/services/cache';
 
 const { rpc, from } = vi.hoisted(() => ({ rpc: vi.fn(), from: vi.fn() }));
 
@@ -11,6 +12,7 @@ import app from '../src/app';
 beforeEach(() => {
   rpc.mockReset();
   from.mockReset();
+  clearCache(); // the response cache is module-global — reset it between tests
 });
 
 describe('GET /api/timestamps', () => {
@@ -31,12 +33,25 @@ describe('GET /api/timestamps', () => {
     expect(res.status).toBe(500);
   });
 
-  it('reports hasMore when more rows remain than the page', async () => {
-    from.mockReturnValue(createChain({ data: [], count: 500, error: null }));
+  it('reports hasMore and slices the sentinel row when a full extra page is fetched', async () => {
+    // buildTimestampsQuery fetches limit + 1 rows; a 51st row means "more exist".
+    const rows = Array.from({ length: 51 }, (_, i) => ({ id: i + 1 }));
+    from.mockReturnValue(createChain({ data: rows, count: 500, error: null }));
 
     const res = await request(app).get('/api/timestamps?limit=50&offset=0');
     expect(res.body.hasMore).toBe(true);
+    expect(res.body.data).toHaveLength(50); // sentinel sliced off
     expect(res.body.totalCount).toBe(500);
+  });
+
+  it('returns an exact totalCount at the end, ignoring a stale low estimate', async () => {
+    const rows = Array.from({ length: 10 }, (_, i) => ({ id: i }));
+    // Estimate (3) is below what we've actually loaded (offset 50 + 10 = 60).
+    from.mockReturnValue(createChain({ data: rows, count: 3, error: null }));
+
+    const res = await request(app).get('/api/timestamps?limit=50&offset=50');
+    expect(res.body.hasMore).toBe(false);
+    expect(res.body.totalCount).toBe(60);
   });
 });
 
@@ -94,6 +109,38 @@ describe('GET /api/timestamps/distinct/league-pairs (W1 null-data guard)', () =>
     const res = await request(app).get('/api/timestamps/distinct/league-pairs');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ pairs: [] });
+  });
+});
+
+describe('Response caching (TTL cache)', () => {
+  it('serves a repeated distinct/years request from cache (one RPC call)', async () => {
+    rpc.mockResolvedValue({ data: [{ year: 2025 }], error: null });
+
+    const a = await request(app).get('/api/timestamps/distinct/years');
+    const b = await request(app).get('/api/timestamps/distinct/years');
+
+    expect(a.body).toEqual({ years: [2025] });
+    expect(b.body).toEqual({ years: [2025] });
+    expect(rpc).toHaveBeenCalledTimes(1); // second request hit the cache
+  });
+
+  it('re-queries after the cache is cleared (e.g. an admin write)', async () => {
+    rpc.mockResolvedValue({ data: [{ year: 2025 }], error: null });
+
+    await request(app).get('/api/timestamps/distinct/years');
+    clearCache();
+    await request(app).get('/api/timestamps/distinct/years');
+
+    expect(rpc).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not cache a distinct/:column request that has a search term', async () => {
+    rpc.mockResolvedValue({ data: [{ value: 'Brno' }], error: null });
+
+    await request(app).get('/api/timestamps/distinct/place?search=Br');
+    await request(app).get('/api/timestamps/distinct/place?search=Br');
+
+    expect(rpc).toHaveBeenCalledTimes(2); // searches vary → not cached
   });
 });
 

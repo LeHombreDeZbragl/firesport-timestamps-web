@@ -89,8 +89,12 @@ function applyFilters(query: FilterBuilder, filters: ParsedFilters): FilterBuild
 
 /**
  * Builds the main paginated, filtered, sorted data query.
- * Requests an exact row count so the response can include `totalCount` and
- * `hasMore` without a second query.
+ *
+ * Uses an *estimated* count (planner statistic — O(1)) instead of `exact`,
+ * which on a 250k-row table would scan the whole matching set on every page
+ * load. The route derives an exact `hasMore` separately by fetching one extra
+ * row (limit + 1), so pagination stays correct even though the total is
+ * approximate; the estimate is only used for the displayed grand total.
  */
 export async function buildTimestampsQuery(
   supabase: SupabaseClient,
@@ -101,14 +105,16 @@ export async function buildTimestampsQuery(
   // .select() returns a PostgrestFilterBuilder — then we apply filters, sort, range.
   let query: FilterBuilder = supabase
     .from('timestamps')
-    .select('*', { count: 'exact' });
+    .select('*', { count: 'estimated' });
 
   query = applyFilters(query, filters);
 
   query = query.order(sort.column, { ascending: sort.order === 'asc' });
 
   const from = pagination.offset;
-  const to = pagination.offset + pagination.limit - 1;
+  // Fetch one extra row so the route can tell whether more rows exist without
+  // an exact count. The route slices this sentinel row off before responding.
+  const to = pagination.offset + pagination.limit;
   query = query.range(from, to);
 
   return query;

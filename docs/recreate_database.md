@@ -35,6 +35,8 @@ get_distinct_league_pairs.sql
 get_timestamps_stats.sql
 get_timestamps_graph_stats.sql
 If final_time generated column is missing, run: add_final_time_column.sql
+If the secondary indexes are missing (only relevant when rebuilding from the SQL files rather than the pg_dump backup, which already includes them), run: indexes.sql
+If the atomic batch-save function is missing, run: batch_save_timestamps.sql
 
 Phase 5 — Update Environment Variables
 Update your local .env file with the new project values:
