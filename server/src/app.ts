@@ -109,6 +109,15 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// ─── Unknown /api routes → JSON 404 ─────────────────────────────────────────────
+//
+// Registered AFTER the API routers/health but BEFORE the static + SPA fallback
+// below, so an unknown /api/... path returns a JSON 404 instead of falling
+// through to the catch-all `*` handler and being served index.html with a 200.
+app.use('/api', (_req, res) => {
+  res.status(404).json({ error: 'Not found.' });
+});
+
 // ─── Global error handler ──────────────────────────────────────────────────────
 app.use(
   (

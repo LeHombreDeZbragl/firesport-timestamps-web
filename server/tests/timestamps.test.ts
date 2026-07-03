@@ -96,3 +96,18 @@ describe('GET /api/timestamps/distinct/league-pairs (W1 null-data guard)', () =>
     expect(res.body).toEqual({ pairs: [] });
   });
 });
+
+describe('Unknown /api routes (W4 404 guard)', () => {
+  it('returns a JSON 404 for an unknown /api path', async () => {
+    const res = await request(app).get('/api/does-not-exist');
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Not found.' });
+    expect(res.type).toMatch(/json/);
+  });
+
+  it('returns a JSON 404 for an unknown method on a known /api prefix', async () => {
+    const res = await request(app).put('/api/timestamps/nonsense/path');
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Not found.' });
+  });
+});
