@@ -390,36 +390,25 @@ router.post('/batch', requireAdmin, asyncHandler(async (req: Request, res: Respo
     return;
   }
 
-  // 4. Execute writes (validate-first approach: errors above catch field problems)
-  try {
-    if (deletes.length > 0) {
-      const { error: deleteError } = await supabase
-        .from('timestamps')
-        .delete()
-        .in('id', deletes);
-      if (deleteError) throw deleteError;
-    }
+  // 4. Execute all writes atomically via the batch_save_timestamps RPC.
+  //    The plpgsql function body is a single implicit transaction: any failure
+  //    (e.g. a constraint violation on one insert) rolls back the whole batch,
+  //    so a mid-sequence error can never leave partial changes. Validation has
+  //    already run above; the RPC only receives sanitised values.
+  //    (SQL: server/sql/batch_save_timestamps.sql — apply by hand in Supabase.)
+  const { error: rpcError } = await supabase.rpc('batch_save_timestamps', {
+    p_deletes: deletes,
+    p_updates: updates,
+    p_inserts: inserts,
+  });
 
-    for (const item of updates) {
-      const { error: updateError } = await supabase
-        .from('timestamps')
-        .update(item.fields)
-        .eq('id', item.id);
-      if (updateError) throw updateError;
-    }
-
-    if (inserts.length > 0) {
-      const { error: insertError } = await supabase
-        .from('timestamps')
-        .insert(inserts);
-      if (insertError) throw insertError;
-    }
-
-    res.json({ success: true });
-  } catch (err) {
-    logger.error({ err }, 'POST /api/timestamps/batch — write error');
+  if (rpcError) {
+    logger.error({ err: rpcError }, 'POST /api/timestamps/batch — write error');
     res.status(500).json({ error: 'Failed to save batch changes.' });
+    return;
   }
+
+  res.json({ success: true });
 }));
 
 export default router;

@@ -179,6 +179,9 @@ const EDITABLE_NULLABLE_NUMERIC_FIELDS: ReadonlyArray<string> = [
 
 const EDITABLE_REQUIRED_NUMERIC_FIELDS: ReadonlyArray<string> = ['placement'];
 
+// The set of editable columns below must stay in sync with the fixed column
+// whitelist in server/sql/batch_save_timestamps.sql (the atomic batch-save RPC).
+// If you add/remove an editable column, update both places.
 const ALL_EDITABLE_FIELDS = new Set<string>([
   ...EDITABLE_STRING_FIELDS,
   ...EDITABLE_NULLABLE_NUMERIC_FIELDS,

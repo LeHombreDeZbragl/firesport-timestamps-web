@@ -49,7 +49,8 @@ Stats, distinct-value autocomplete, distinct years, and league pairs are all com
 these lives in `server/sql/*.sql` and **must be applied by hand in the Supabase SQL editor** — there
 is no migration tooling. If you change a route's RPC contract, you must edit the matching `.sql` file
 *and* re-run it in Supabase. RPCs in use: `get_timestamps_stats`, `get_timestamps_graph_stats`,
-`get_distinct_attack_years`, `get_distinct_league_pairs`, `get_distinct_column_values`.
+`get_distinct_attack_years`, `get_distinct_league_pairs`, `get_distinct_column_values`,
+`batch_save_timestamps` (the atomic admin write path — see the batch section below).
 
 Only `buildTimestampsQuery` in `server/src/services/queryBuilder.ts` is live (the main paginated
 data fetch). `buildStatsQuery`, `buildDistinctValuesQuery`, and the entire `statsCalculator.ts` are
@@ -93,9 +94,12 @@ have ILIKE wildcards (`%`, `_`) stripped to prevent slow-pattern DoS.
 
 The primary admin write path. It **validates everything first** (structure, field types/ranges, and
 league/attack_type/category values against the DB's distinct sets) and returns 400 with per-row/per-field
-errors before touching the DB. Writes then run sequentially as deletes → updates → inserts. This is
-**not a real transaction** — a mid-sequence failure can leave partial changes (returns 500). The single
-`PATCH`/`DELETE /:id` routes still exist for one-off edits.
+errors before touching the DB. Writes then run as deletes → updates → inserts inside the
+`batch_save_timestamps` RPC (`server/sql/batch_save_timestamps.sql`), whose plpgsql body is a single
+implicit transaction — **a mid-sequence failure rolls the whole batch back** and returns 500, so
+partial writes can't happen. The RPC is the atomicity guarantee only; all values are still validated
+in Node first. Its fixed editable-column whitelist must stay in sync with `ALL_EDITABLE_FIELDS` in
+`server/src/middleware/validation.ts`. The single `PATCH`/`DELETE /:id` routes still exist for one-off edits.
 
 ### Client state model
 
