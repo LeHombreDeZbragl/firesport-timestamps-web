@@ -52,9 +52,10 @@ is no migration tooling. If you change a route's RPC contract, you must edit the
 `get_distinct_attack_years`, `get_distinct_league_pairs`, `get_distinct_column_values`,
 `batch_save_timestamps` (the atomic admin write path — see the batch section below).
 
-Only `buildTimestampsQuery` in `server/src/services/queryBuilder.ts` is live (the main paginated
-data fetch). `buildStatsQuery`, `buildDistinctValuesQuery`, and the entire `statsCalculator.ts` are
-**legacy/unused** leftovers from before stats moved to RPCs — don't wire new code through them.
+`server/src/services/queryBuilder.ts` holds only `buildTimestampsQuery` (the main paginated data
+fetch) and its `applyFilters` helper. The old `buildStatsQuery` / `buildDistinctValuesQuery` builders
+and `statsCalculator.ts` — legacy leftovers from before stats moved to RPCs — have been deleted; all
+aggregates now go through the Supabase RPCs above.
 
 ### The `timestamps` table and `final_time`
 

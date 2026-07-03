@@ -4,7 +4,6 @@ import {
   type ParsedFilters,
   type ParsedSort,
   type ParsedPagination,
-  type AutocompleteColumn,
   NO_LEAGUE_VALUE,
 } from '../types/index';
 
@@ -111,52 +110,6 @@ export async function buildTimestampsQuery(
   const from = pagination.offset;
   const to = pagination.offset + pagination.limit - 1;
   query = query.range(from, to);
-
-  return query;
-}
-
-/**
- * Builds the stats query — fetches only `lp` and `pp` columns for all
- * matching rows (no pagination, no sort needed).  The count of ALL filtered
- * rows (including those with null lp/pp) is obtained via the count option.
- */
-export async function buildStatsQuery(
-  supabase: SupabaseClient,
-  filters: ParsedFilters
-) {
-  let query: FilterBuilder = supabase
-    .from('timestamps')
-    .select('lp, pp', { count: 'exact' });
-
-  query = applyFilters(query, filters);
-
-  return query;
-}
-
-/**
- * Builds the distinct values query for autocomplete suggestions.
- * Optionally filters by a case-insensitive partial match on the column value.
- *
- * Supabase JS does not have a native SELECT DISTINCT shortcut, so we request
- * only the target column and rely on the fact that Supabase returns all rows;
- * de-duplication is done in Node.js inside the route handler.
- * For large tables, this is replaced by the RPC approach (used for years).
- * For text columns the ILIKE filter narrows the result set before transfer.
- */
-export function buildDistinctValuesQuery(
-  supabase: SupabaseClient,
-  column: AutocompleteColumn,
-  searchTerm: string
-) {
-  let query = supabase
-    .from('timestamps')
-    .select(column)
-    .order(column, { ascending: true })
-    .limit(500); // cap to avoid transferring the full table for autocomplete
-
-  if (searchTerm.length > 0) {
-    query = query.ilike(column, `%${searchTerm}%`);
-  }
 
   return query;
 }
