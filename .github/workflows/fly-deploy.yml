@@ -6,8 +6,26 @@ on:
       - main          # auto-deploy on every push to main
 
 jobs:
+  test:
+    name: API tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # Installs all workspace deps from the lockfile.
+      - run: npm ci
+
+      # Server API test suite. Mocks Supabase, so it needs no database or secrets.
+      - run: npm test
+
   deploy:
     name: Deploy
+    needs: test          # deploy only if the test suite passes
     runs-on: ubuntu-latest
     # Prevent two deploys from racing if pushes happen in quick succession
     concurrency: deploy-group

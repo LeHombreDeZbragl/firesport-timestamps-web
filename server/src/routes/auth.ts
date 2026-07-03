@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
 
@@ -9,14 +9,19 @@ const router = Router();
 // Very strict: 5 login attempts per 15 minutes per IP.
 // skipSuccessfulRequests ensures only failed attempts count toward the limit.
 //
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
-  skipSuccessfulRequests: true,
-  standardHeaders: 'draft-7',
-  legacyHeaders: false,
-  message: { error: 'Too many login attempts. Please wait 15 minutes and try again.' },
-});
+// Disabled under test (no-op passthrough) so the suite can exercise the login
+// route repeatedly without tripping the strict per-IP limit.
+const loginLimiter =
+  process.env['NODE_ENV'] === 'test'
+    ? ((_req: Request, _res: Response, next: NextFunction): void => next())
+    : rateLimit({
+        windowMs: 15 * 60 * 1000,
+        max: 5,
+        skipSuccessfulRequests: true,
+        standardHeaders: 'draft-7',
+        legacyHeaders: false,
+        message: { error: 'Too many login attempts. Please wait 15 minutes and try again.' },
+      });
 
 // ─── POST /api/auth/login ───────────────────────────────────────────────────────
 //

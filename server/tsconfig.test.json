@@ -1,0 +1,12 @@
+{
+  // Editor-only project so the IDE type-checks tests/ with Node types.
+  // The production build (tsconfig.json) still excludes tests/ — Vitest runs
+  // them via esbuild, so this file is never part of `tsc` → dist.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  },
+  "include": ["src/**/*", "tests/**/*"]
+}

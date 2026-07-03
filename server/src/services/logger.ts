@@ -12,8 +12,8 @@ const nodeEnv = process.env['NODE_ENV'] ?? 'development';
  *               production builds.
  */
 const logger = pino({
-  level: process.env['LOG_LEVEL'] ?? 'info',
-  ...(nodeEnv !== 'production' && {
+  level: process.env['LOG_LEVEL'] ?? (nodeEnv === 'test' ? 'silent' : 'info'),
+  ...(nodeEnv === 'development' && {
     transport: {
       target: 'pino-pretty',
       options: {
