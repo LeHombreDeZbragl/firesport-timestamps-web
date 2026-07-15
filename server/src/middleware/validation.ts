@@ -199,16 +199,23 @@ const PLACEMENT_MAX = 999;
 const LP_PP_MIN = 12.01;
 const LP_PP_MAX = 99.99;
 
-// `link` is admin-only and rendered as an href only when it starts with "http"
-// (client/src/components/table/ClickableCell.tsx), but harden it server-side too:
-// allow empty, otherwise require an http(s) URL within a sane length cap.
+// `link` is admin-only. The DB stores only the firesport result-page path
+// fragment (e.g. "vysledek-dolni-hradiste-14484.html"); the client prefixes it
+// with FIRESPORT_LINK_BASE to build the full href, and renders values that
+// already start with "http" as-is (client/src/components/table/ClickableCell.tsx).
+// Harden server-side: allow empty, a firesport path fragment, or a full http(s)
+// URL, all within a sane length cap.
 const LINK_MAX_LENGTH = 500;
 const URL_PREFIX_REGEX = /^https?:\/\//i;
+// Firesport result-page fragment: "vysledek-<slug>-<id>.html" (lowercase slug of
+// ascii letters/digits/hyphens). Matches e.g. "vysledek-l-aza-r-15593.html".
+const FIRESPORT_FRAGMENT_REGEX = /^vysledek-[a-z0-9-]+\.html$/i;
 
-/** True if `link` is empty or a length-capped http(s) URL. */
+/** True if `link` is empty, a firesport path fragment, or a length-capped http(s) URL. */
 function isAcceptableLink(value: string): boolean {
   if (value.trim() === '') return true;
-  return value.length <= LINK_MAX_LENGTH && URL_PREFIX_REGEX.test(value);
+  if (value.length > LINK_MAX_LENGTH) return false;
+  return FIRESPORT_FRAGMENT_REGEX.test(value) || URL_PREFIX_REGEX.test(value);
 }
 
 /**
@@ -296,7 +303,7 @@ export function parseUpdateBody(
         return { valid: false, error: `Field "${key}" cannot be empty.` };
       }
       if (key === 'link' && !isAcceptableLink(value)) {
-        return { valid: false, error: `Field "link" must be an http(s) URL (max ${LINK_MAX_LENGTH} characters) or empty.` };
+        return { valid: false, error: `Field "link" must be a firesport result-page path (e.g. "vysledek-dolni-hradiste-14484.html"), an http(s) URL (max ${LINK_MAX_LENGTH} characters), or empty.` };
       }
       data[key] = value;
     }
@@ -383,7 +390,7 @@ function validateBatchField(
     return undefined;
   }
   if (key === 'link' && !isAcceptableLink(value)) {
-    errors.push({ rowRef, field: key, message: `Odkaz musí být platná http(s) adresa (max ${LINK_MAX_LENGTH} znaků) nebo prázdný.` });
+    errors.push({ rowRef, field: key, message: `Odkaz musí být cesta na výsledky (např. „vysledek-dolni-hradiste-14484.html“), platná http(s) adresa (max ${LINK_MAX_LENGTH} znaků) nebo prázdný.` });
     return undefined;
   }
   return value;

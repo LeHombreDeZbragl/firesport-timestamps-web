@@ -122,13 +122,19 @@ describe('parseUpdateBody', () => {
     expect(parseUpdateBody({ link: '' })).toEqual({ valid: true, data: { link: '' } });
     expect(parseUpdateBody({ team: '  ' }).valid).toBe(false);
   });
-  it('accepts an http(s) link and rejects non-URLs / over-length links', () => {
+  it('accepts an http(s) link or firesport fragment and rejects other non-URLs / over-length links', () => {
     expect(parseUpdateBody({ link: 'https://example.com/x' })).toEqual({
       valid: true,
       data: { link: 'https://example.com/x' },
     });
+    expect(parseUpdateBody({ link: 'vysledek-l-aza-r-15593.html' })).toEqual({
+      valid: true,
+      data: { link: 'vysledek-l-aza-r-15593.html' },
+    });
+    expect(parseUpdateBody({ link: 'vysledek-marl-ovice-15453.html' }).valid).toBe(true);
     expect(parseUpdateBody({ link: 'javascript:alert(1)' }).valid).toBe(false);
     expect(parseUpdateBody({ link: 'example.com' }).valid).toBe(false);
+    expect(parseUpdateBody({ link: 'nejaky-soubor.html' }).valid).toBe(false);
     expect(parseUpdateBody({ link: `https://e.com/${'a'.repeat(500)}` }).valid).toBe(false);
   });
 });
