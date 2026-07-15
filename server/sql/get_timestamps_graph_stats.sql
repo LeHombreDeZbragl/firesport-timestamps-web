@@ -10,10 +10,16 @@
 --   dist_over_18      bigint  - successful attacks with final_time ≥ 18 s
 --   dist_unsuccessful bigint  - attacks where final_time IS NULL
 --   progression       json    - array of chronological groups, each:
---                               { group, avg_time, min_time, start_date, end_date, avg_lp, avg_pp }
+--                               { group, avg_time, min_time, start_date, end_date,
+--                                 avg_lp, avg_pp, place }
+--                               place is only populated in the two small-data tiers
+--                               (≤40 rows or ≤20 days) and only when the group has a
+--                               single unambiguous place; otherwise it is null.
 --                               Only rows where final_time IS NOT NULL are used.
---                               Grouping: when the data spans 5–30 distinct days,
---                               one group per day; otherwise 30 equal NTILE buckets.
+--                               Grouping (on the successful rows): ≤40 rows → one
+--                               group per row (individual lp/pp); otherwise if ≤20
+--                               distinct days → one group per day; otherwise 30
+--                               equal NTILE buckets.
 --
 -- Run once in the Supabase SQL editor; re-run to replace on changes.
 
@@ -37,7 +43,7 @@ LANGUAGE sql
 STABLE
 AS $$
   WITH base AS (
-    SELECT id, attack_date, final_time, lp, pp
+    SELECT id, attack_date, final_time, lp, pp, place
     FROM timestamps
     WHERE
       (p_team        IS NULL OR team        = ANY(p_team))
@@ -60,12 +66,15 @@ AS $$
       )
   ),
   successful AS (
-    SELECT id, attack_date, final_time, lp, pp
+    SELECT id, attack_date, final_time, lp, pp, place
     FROM base
     WHERE final_time IS NOT NULL
   ),
-  day_count AS (
-    SELECT COUNT(DISTINCT attack_date) AS n FROM successful
+  counts AS (
+    SELECT
+      COUNT(*)                    AS n_rows,
+      COUNT(DISTINCT attack_date) AS n_days
+    FROM successful
   ),
   with_tiles AS (
     SELECT
@@ -73,11 +82,15 @@ AS $$
       final_time,
       lp,
       pp,
-      -- When the data spans 5–30 distinct days, use one bucket per day so each
-      -- point is a real day's avg/min. Otherwise fall back to 30 equal
-      -- chronological NTILE buckets.
+      place,
+      -- ≤40 successful rows: one bucket per row so each point shows that row's
+      -- own lp/pp (no aggregation). Otherwise, if the data spans ≤20 distinct
+      -- days, one bucket per day (aggregate same-day rows). Otherwise fall back
+      -- to 30 equal chronological NTILE buckets.
       CASE
-        WHEN (SELECT n FROM day_count) BETWEEN 5 AND 30
+        WHEN (SELECT n_rows FROM counts) <= 40
+          THEN ROW_NUMBER() OVER (ORDER BY attack_date, id)
+        WHEN (SELECT n_days FROM counts) <= 20
           THEN DENSE_RANK() OVER (ORDER BY attack_date)
         ELSE NTILE(30)      OVER (ORDER BY attack_date, id)
       END AS grp
@@ -91,7 +104,14 @@ AS $$
       MIN(attack_date)::text                       AS start_date,
       MAX(attack_date)::text                       AS end_date,
       ROUND(AVG(lp)::numeric, 2)::float4           AS avg_lp,
-      ROUND(AVG(pp)::numeric, 2)::float4           AS avg_pp
+      ROUND(AVG(pp)::numeric, 2)::float4           AS avg_pp,
+      -- Only expose place in the small-data tiers, and only when the group's
+      -- rows all share one place (single row, or one competition per day).
+      CASE
+        WHEN ((SELECT n_rows FROM counts) <= 40 OR (SELECT n_days FROM counts) <= 20)
+             AND COUNT(DISTINCT place) = 1
+          THEN MIN(place)
+      END                                          AS place
     FROM with_tiles
     GROUP BY grp
   )

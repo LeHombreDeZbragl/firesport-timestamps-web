@@ -139,6 +139,7 @@ export interface ProgressionPoint {
   endDate: string;    // "YYYY-MM-DD"
   avgLp: number | null;
   avgPp: number | null;
+  place: string | null;  // only set in small-data tiers (≤40 rows or ≤20 days)
 }
 
 /** Chart data: time-bucket distribution + chronological progression. */

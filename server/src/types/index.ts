@@ -107,6 +107,7 @@ export interface ProgressionPoint {
   endDate: string;
   avgLp: number | null;
   avgPp: number | null;
+  place: string | null;
 }
 
 export interface GraphStatsResponse {

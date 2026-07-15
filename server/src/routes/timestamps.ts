@@ -192,7 +192,7 @@ router.get('/graph-stats', asyncHandler(async (req: Request, res: Response): Pro
     return;
   }
 
-  type RawProgression = { group: number; avg_time: number; min_time: number; start_date: string; end_date: string; avg_lp: number | null; avg_pp: number | null };
+  type RawProgression = { group: number; avg_time: number; min_time: number; start_date: string; end_date: string; avg_lp: number | null; avg_pp: number | null; place: string | null };
 
   const row = Array.isArray(data) ? data[0] : data;
   const graphStats: GraphStatsResponse = row
@@ -211,6 +211,7 @@ router.get('/graph-stats', asyncHandler(async (req: Request, res: Response): Pro
               endDate:   p.end_date,
               avgLp:     p.avg_lp ?? null,
               avgPp:     p.avg_pp ?? null,
+              place:     p.place ?? null,
             }))
           : [],
       }

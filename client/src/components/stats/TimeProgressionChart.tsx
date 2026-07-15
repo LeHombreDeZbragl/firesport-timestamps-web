@@ -76,6 +76,7 @@ interface ChartDataPoint {
   min: number;
   lp: number | null;
   pp: number | null;
+  place: string | null;
 }
 
 interface CustomTooltipProps {
@@ -108,7 +109,10 @@ function CustomTooltip({ active, payload, allSame }: CustomTooltipProps): React.
       fontSize: '12px',
       color: '#f3f4f6',
     }}>
-      <div style={{ marginBottom: 4, color: '#9ca3af' }}>{dateHeader}</div>
+      <div style={{ marginBottom: point.place ? 2 : 4, color: '#9ca3af' }}>{dateHeader}</div>
+      {point.place ? (
+        <div style={{ marginBottom: 4, color: '#d1d5db' }}>{point.place}</div>
+      ) : null}
       {allSame ? (
         <>
           <div style={{ color: '#60a5fa' }}>
@@ -157,6 +161,7 @@ export function TimeProgressionChart({
     min: p.minTime,
     lp: p.avgLp,
     pp: p.avgPp,
+    place: p.place,
   }));
 
   const axisDateFmt: DateFormat = allSame
