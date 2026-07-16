@@ -337,7 +337,7 @@ purely making the repo a complete source of truth.
 - Server-side JWT revocation / logout invalidation (8h expiry accepted for single-admin tool).
 - ~~`count: 'exact'` → `estimated` on the paginated read.~~ **Done** (the table reached ~250k rows).
   `buildTimestampsQuery` now uses an estimated count and fetches `limit + 1` rows so `hasMore` stays
-  exact; the route also caches the unfiltered stats/graph/distinct responses (60s TTL, cleared on
+  exact; the route also caches the unfiltered stats/graph/distinct responses (5 min TTL, cleared on
   writes) via `server/src/services/cache.ts`.
 - Client-side test coverage (focused API tests only, per scope).
 - Automated backups (free-plan limitation, accepted).

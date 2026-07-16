@@ -167,3 +167,10 @@ green merge to `main` ships live. Branch and open a PR for anything you don't wa
   (e.g. Redis) if it ever runs multi-machine or needs to survive restarts.
 - **No JWT revocation.** Admin tokens are valid for their full 8h expiry; there's no server-side logout
   invalidation. Accepted for a single-admin tool.
+- **Cold starts on an idle app.** `min_machines_running = 0`, so every machine autostops while idle and
+  the first request after a quiet spell waits ~1s for a machine to wake (Fly's proxy holds the request,
+  so it's a slow load, not an error). Autostop also discards the process-local response cache, so that
+  same first visitor pays one uncached DB round-trip. Both costs land only on the first request after
+  idle — i.e. when nobody is using the site. Pinning a machine with `min_machines_running = 1` avoids
+  them but costs ~$3.32/month for 24/7 compute; that trade was rejected. Don't re-add the pin to chase
+  cold starts or cache warmth.
