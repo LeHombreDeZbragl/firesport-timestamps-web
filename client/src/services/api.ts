@@ -190,7 +190,7 @@ export async function fetchLeaguePairs(): Promise<LeaguePairsApiResponse['pairs'
 }
 
 /**
- * Fetches chart data: time-bucket distribution + 20-point progression series.
+ * Fetches chart data: time-bucket distribution + chronological progression series.
  */
 export async function fetchGraphStats(filters: Filters): Promise<GraphStats> {
   const params = filtersToParams(filters);

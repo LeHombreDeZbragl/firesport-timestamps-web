@@ -11,15 +11,22 @@
 --   dist_unsuccessful bigint  - attacks where final_time IS NULL
 --   progression       json    - array of chronological groups, each:
 --                               { group, avg_time, min_time, start_date, end_date,
---                                 avg_lp, avg_pp, place }
---                               place is only populated in the two small-data tiers
---                               (≤40 rows or ≤20 days) and only when the group has a
---                               single unambiguous place; otherwise it is null.
+--                                 avg_lp, avg_pp, place, team, bucket }
 --                               Only rows where final_time IS NOT NULL are used.
---                               Grouping (on the successful rows): ≤40 rows → one
---                               group per row (individual lp/pp); otherwise if ≤20
---                               distinct days → one group per day; otherwise 30
---                               equal NTILE buckets.
+--
+--                               Grouping (decided once for the whole result set):
+--                                 ≤40 rows  -> 'row'   one group per row (individual lp/pp)
+--                                 ≤20 days  -> 'day'   one group per day
+--                                 ≥4 years  -> 'year'  one group per year
+--                                 otherwise -> 'month' one group per month
+--                               `bucket` names that granularity, so the client can label
+--                               each point with the right period ("2023" / "duben 2023" / a date).
+--
+--                               place/team label each point and are mutually exclusive:
+--                                 ≤40 rows, all at one place -> team  (place is redundant)
+--                                 ≤40 rows or ≤20 days       -> place
+--                                 otherwise                  -> both null
+--                               Either is null unless the group agrees on one value.
 --
 -- Run once in the Supabase SQL editor; re-run to replace on changes.
 
@@ -43,7 +50,7 @@ LANGUAGE sql
 STABLE
 AS $$
   WITH base AS (
-    SELECT id, attack_date, final_time, lp, pp, place
+    SELECT id, attack_date, final_time, lp, pp, place, team
     FROM timestamps
     WHERE
       (p_team        IS NULL OR team        = ANY(p_team))
@@ -66,35 +73,70 @@ AS $$
       )
   ),
   successful AS (
-    SELECT id, attack_date, final_time, lp, pp, place
+    SELECT id, attack_date, final_time, lp, pp, place, team
     FROM base
     WHERE final_time IS NOT NULL
   ),
   counts AS (
     SELECT
-      COUNT(*)                    AS n_rows,
-      COUNT(DISTINCT attack_date) AS n_days
+      COUNT(*)                                       AS n_rows,
+      COUNT(DISTINCT attack_date)                    AS n_days,
+      COUNT(DISTINCT EXTRACT(YEAR FROM attack_date)) AS n_years,
+      -- "Every row shares one place", without the sort a COUNT(DISTINCT) costs.
+      -- No rows, or an all-NULL place, compares to NULL -> false.
+      COALESCE(MIN(place) = MAX(place), false)       AS one_place
     FROM successful
   ),
-  with_tiles AS (
+  modes AS (
+    SELECT
+      -- ≤40 rows that all sit at a single place: the place is the same on every
+      -- point and tells the reader nothing, so label points with the team instead.
+      (n_rows <= 40 AND one_place)                        AS show_team,
+      (n_rows <= 40 OR n_days <= 20)
+        AND NOT (n_rows <= 40 AND one_place)              AS show_place,
+      -- Granularity for the whole series; see the header comment.
+      CASE
+        WHEN n_rows  <= 40 THEN 'row'
+        WHEN n_days  <= 20 THEN 'day'
+        WHEN n_years >= 4  THEN 'year'
+        ELSE                    'month'
+      END                                                 AS bucket
+    FROM counts
+  ),
+  keyed AS (
     SELECT
       attack_date,
       final_time,
       lp,
       pp,
       place,
-      -- ≤40 successful rows: one bucket per row so each point shows that row's
-      -- own lp/pp (no aggregation). Otherwise, if the data spans ≤20 distinct
-      -- days, one bucket per day (aggregate same-day rows). Otherwise fall back
-      -- to 30 equal chronological NTILE buckets.
-      CASE
-        WHEN (SELECT n_rows FROM counts) <= 40
-          THEN ROW_NUMBER() OVER (ORDER BY attack_date, id)
-        WHEN (SELECT n_days FROM counts) <= 20
-          THEN DENSE_RANK() OVER (ORDER BY attack_date)
-        ELSE NTILE(30)      OVER (ORDER BY attack_date, id)
-      END AS grp
+      team,
+      -- Collapse every mode onto one sort key, so the ranking below needs a
+      -- single window. A CASE over four windows would not help: Postgres
+      -- evaluates every window it sees, sorting the whole set once per ordering.
+      CASE (SELECT bucket FROM modes)
+        WHEN 'year'  THEN date_trunc('year',  attack_date)
+        WHEN 'month' THEN date_trunc('month', attack_date)
+        ELSE              attack_date::timestamp
+      END AS period,
+      -- 'row' mode wants one group per row: id makes the key unique, so the rank
+      -- below numbers rows 1..n. Other modes share one key per period.
+      CASE WHEN (SELECT bucket FROM modes) = 'row' THEN id ELSE 0 END AS tie
     FROM successful
+  ),
+  ranked AS (
+    SELECT
+      attack_date,
+      final_time,
+      lp,
+      pp,
+      place,
+      team,
+      -- Buckets follow calendar periods rather than equal-sized tiles, so every
+      -- point covers a period a reader can name. DENSE_RANK collapses periods
+      -- with no attacks, keeping the series contiguous.
+      DENSE_RANK() OVER (ORDER BY period, tie) AS grp
+    FROM keyed
   ),
   progression_agg AS (
     SELECT
@@ -105,14 +147,20 @@ AS $$
       MAX(attack_date)::text                       AS end_date,
       ROUND(AVG(lp)::numeric, 2)::float4           AS avg_lp,
       ROUND(AVG(pp)::numeric, 2)::float4           AS avg_pp,
-      -- Only expose place in the small-data tiers, and only when the group's
-      -- rows all share one place (single row, or one competition per day).
+      -- Label each point with a place or a team (never both, see `modes`), and
+      -- only when the group's rows agree on one value. MIN = MAX tests that in a
+      -- single pass; COUNT(DISTINCT) would sort every group, and the sort would
+      -- run even for the modes that discard the result.
       CASE
-        WHEN ((SELECT n_rows FROM counts) <= 40 OR (SELECT n_days FROM counts) <= 20)
-             AND COUNT(DISTINCT place) = 1
+        WHEN (SELECT show_place FROM modes) AND MIN(place) = MAX(place)
           THEN MIN(place)
-      END                                          AS place
-    FROM with_tiles
+      END                                          AS place,
+      CASE
+        WHEN (SELECT show_team FROM modes) AND MIN(team) = MAX(team)
+          THEN MIN(team)
+      END                                          AS team,
+      (SELECT bucket FROM modes)                   AS bucket
+    FROM ranked
     GROUP BY grp
   )
   SELECT

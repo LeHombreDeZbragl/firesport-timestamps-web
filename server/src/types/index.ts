@@ -99,6 +99,9 @@ export interface StatsResponse {
   avgPp: number | null;
 }
 
+/** Calendar granularity each progression point covers. */
+export type ProgressionBucket = 'row' | 'day' | 'month' | 'year';
+
 export interface ProgressionPoint {
   group: number;
   avgTime: number;
@@ -108,6 +111,8 @@ export interface ProgressionPoint {
   avgLp: number | null;
   avgPp: number | null;
   place: string | null;
+  team: string | null;
+  bucket: ProgressionBucket | null;
 }
 
 export interface GraphStatsResponse {

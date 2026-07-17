@@ -21,6 +21,7 @@ import {
   type TimestampsResponse,
   type StatsResponse,
   type GraphStatsResponse,
+  type ProgressionBucket,
   type DistinctValuesResponse,
   type DistinctYearsResponse,
   type LeaguePairsResponse,
@@ -161,8 +162,9 @@ router.get('/stats', asyncHandler(async (req: Request, res: Response): Promise<v
 
 // ─── GET /api/timestamps/graph-stats ─────────────────────────────────────────
 //
-// Returns chart data: time-bucket distribution + 20-point chronological
-// progression series (avg & min per NTILE group).
+// Returns chart data: time-bucket distribution + a chronological progression
+// series, grouped per row / day / month / year depending on how much data the
+// filters match (the RPC decides; each point carries the `bucket` it used).
 // Accepts the same filter query params as /stats.
 //
 router.get('/graph-stats', asyncHandler(async (req: Request, res: Response): Promise<void> => {
@@ -192,7 +194,7 @@ router.get('/graph-stats', asyncHandler(async (req: Request, res: Response): Pro
     return;
   }
 
-  type RawProgression = { group: number; avg_time: number; min_time: number; start_date: string; end_date: string; avg_lp: number | null; avg_pp: number | null; place: string | null };
+  type RawProgression = { group: number; avg_time: number; min_time: number; start_date: string; end_date: string; avg_lp: number | null; avg_pp: number | null; place: string | null; team: string | null; bucket: ProgressionBucket | null };
 
   const row = Array.isArray(data) ? data[0] : data;
   const graphStats: GraphStatsResponse = row
@@ -212,6 +214,8 @@ router.get('/graph-stats', asyncHandler(async (req: Request, res: Response): Pro
               avgLp:     p.avg_lp ?? null,
               avgPp:     p.avg_pp ?? null,
               place:     p.place ?? null,
+              team:      p.team ?? null,
+              bucket:    p.bucket ?? null,
             }))
           : [],
       }

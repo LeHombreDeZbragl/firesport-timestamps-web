@@ -130,7 +130,10 @@ export interface Stats {
   avgPp: number | null;
 }
 
-/** One point in the 20-group chronological progression series. */
+/** Calendar granularity each progression point covers. */
+export type ProgressionBucket = 'row' | 'day' | 'month' | 'year';
+
+/** One point in the chronological progression series. */
 export interface ProgressionPoint {
   group: number;
   avgTime: number;
@@ -139,7 +142,12 @@ export interface ProgressionPoint {
   endDate: string;    // "YYYY-MM-DD"
   avgLp: number | null;
   avgPp: number | null;
-  place: string | null;  // only set in small-data tiers (≤40 rows or ≤20 days)
+  // Mutually exclusive point label: team when ≤40 rows all share one place
+  // (place would be redundant), otherwise place in the small-data tiers.
+  place: string | null;
+  team: string | null;
+  // Calendar period this point covers. Null when the server predates the field.
+  bucket: ProgressionBucket | null;
 }
 
 /** Chart data: time-bucket distribution + chronological progression. */

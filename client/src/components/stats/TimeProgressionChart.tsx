@@ -7,7 +7,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import type { ProgressionPoint } from '../../types';
+import type { ProgressionBucket, ProgressionPoint } from '../../types';
 
 interface TimeProgressionChartProps {
   progression: ProgressionPoint[];
@@ -26,9 +26,16 @@ function formatFull(dateStr: string): string {
   return `${d}.${m}.${y}`;
 }
 
+// Nominative, as used standalone. Intl's cs-CZ shifts to genitive ("dubna")
+// once a day is in the pattern, so the names are mapped explicitly.
+const CZECH_MONTHS = [
+  'leden', 'únor', 'březen', 'duben', 'květen', 'červen',
+  'červenec', 'srpen', 'září', 'říjen', 'listopad', 'prosinec',
+];
+
 function formatMonthYear(dateStr: string): string {
   const { m, y } = parseDateParts(dateStr);
-  return `${m}.${y}`;
+  return `${CZECH_MONTHS[Number(m) - 1]} ${y}`;
 }
 
 function formatYear(dateStr: string): string {
@@ -76,7 +83,19 @@ interface ChartDataPoint {
   min: number;
   lp: number | null;
   pp: number | null;
-  place: string | null;
+  label: string | null;
+  bucket: ProgressionBucket | null;
+}
+
+/**
+ * Names the calendar period a point covers. Falls back to the point's real date
+ * range when the server sends no bucket (RPC not yet updated).
+ */
+function formatBucketPeriod(point: ChartDataPoint): string {
+  if (point.bucket === 'year') return formatYear(point.startDate);
+  if (point.bucket === 'month') return formatMonthYear(point.startDate);
+  if (point.startDate === point.endDate) return formatFull(point.startDate);
+  return `${formatFull(point.startDate)} – ${formatFull(point.endDate)}`;
 }
 
 interface CustomTooltipProps {
@@ -95,10 +114,7 @@ function CustomTooltip({ active, payload, allSame }: CustomTooltipProps): React.
   if (!active || !payload?.length) return null;
   const point = payload[0].payload;
 
-  const isSameDay = point.startDate === point.endDate;
-  const dateHeader = isSameDay
-    ? formatFull(point.startDate)
-    : `${formatFull(point.startDate)} \u2013 ${formatFull(point.endDate)}`;
+  const dateHeader = formatBucketPeriod(point);
 
   return (
     <div style={{
@@ -109,9 +125,9 @@ function CustomTooltip({ active, payload, allSame }: CustomTooltipProps): React.
       fontSize: '12px',
       color: '#f3f4f6',
     }}>
-      <div style={{ marginBottom: point.place ? 2 : 4, color: '#9ca3af' }}>{dateHeader}</div>
-      {point.place ? (
-        <div style={{ marginBottom: 4, color: '#d1d5db' }}>{point.place}</div>
+      <div style={{ marginBottom: point.label ? 2 : 4, color: '#9ca3af' }}>{dateHeader}</div>
+      {point.label ? (
+        <div style={{ marginBottom: 4, color: '#d1d5db' }}>{point.label}</div>
       ) : null}
       {allSame ? (
         <>
@@ -161,14 +177,26 @@ export function TimeProgressionChart({
     min: p.minTime,
     lp: p.avgLp,
     pp: p.avgPp,
-    place: p.place,
+    // Server sends whichever of the two is meaningful for this data set; never both.
+    label: p.place ?? p.team,
+    bucket: p.bucket,
   }));
 
-  const axisDateFmt: DateFormat = allSame
-    ? 'full'
-    : detectFormat(progression[0].startDate, progression[progression.length - 1].endDate);
+  // Calendar buckets already name their own period, so the axis matches them
+  // exactly; otherwise fall back to inferring a format from the overall span.
+  const bucket = progression[0].bucket;
+  const axisDateFmt: DateFormat =
+    bucket === 'year'
+      ? 'year'
+      : bucket === 'month'
+        ? 'monthYear'
+        : allSame
+          ? 'full'
+          : detectFormat(progression[0].startDate, progression[progression.length - 1].endDate);
 
-  const maxTicks = axisDateFmt === 'full' ? 4 : 6;
+  // Only bare years ("2026") are short enough to fit six labels; full dates and
+  // spelled-out months ("listopad 2026") need the extra room.
+  const maxTicks = axisDateFmt === 'year' ? 6 : 4;
   const xTicks = computeTicks(chartData.length, maxTicks);
 
   return (
