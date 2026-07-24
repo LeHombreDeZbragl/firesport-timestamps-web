@@ -152,10 +152,14 @@ export interface ProgressionPoint {
 
 /** Chart data: time-bucket distribution + chronological progression. */
 export interface GraphStats {
-  distUnder16: number;
+  distUnder13: number;
+  dist13To14: number;
+  dist14To15: number;
+  dist15To16: number;
   dist16To17: number;
   dist17To18: number;
-  distOver18: number;
+  dist18To19: number;
+  distOver19: number;
   distUnsuccessful: number;
   progression: ProgressionPoint[];
 }

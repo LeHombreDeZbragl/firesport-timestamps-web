@@ -4,10 +4,14 @@
 -- Accepts the same array parameters as get_timestamps_stats.
 --
 -- Returns a single row with:
---   dist_under_16     bigint  - successful attacks with final_time < 16 s
+--   dist_under_13     bigint  - successful attacks with final_time < 13 s
+--   dist_13_to_14     bigint  - successful attacks 13 s ≤ time < 14 s
+--   dist_14_to_15     bigint  - successful attacks 14 s ≤ time < 15 s
+--   dist_15_to_16     bigint  - successful attacks 15 s ≤ time < 16 s
 --   dist_16_to_17     bigint  - successful attacks 16 s ≤ time < 17 s
 --   dist_17_to_18     bigint  - successful attacks 17 s ≤ time < 18 s
---   dist_over_18      bigint  - successful attacks with final_time ≥ 18 s
+--   dist_18_to_19     bigint  - successful attacks 18 s ≤ time < 19 s
+--   dist_over_19      bigint  - successful attacks with final_time ≥ 19 s
 --   dist_unsuccessful bigint  - attacks where final_time IS NULL
 --   progression       json    - array of chronological groups, each:
 --                               { group, avg_time, min_time, start_date, end_date,
@@ -15,20 +19,26 @@
 --                               Only rows where final_time IS NOT NULL are used.
 --
 --                               Grouping (decided once for the whole result set):
---                                 ≤40 rows  -> 'row'   one group per row (individual lp/pp)
---                                 ≤20 days  -> 'day'   one group per day
---                                 ≥4 years  -> 'year'  one group per year
+--                                 ≤60 rows  -> 'row'   one group per row (individual lp/pp)
+--                                 ≤30 days  -> 'day'   one group per day
+--                                 ≥6 years  -> 'year'  one group per year
 --                                 otherwise -> 'month' one group per month
 --                               `bucket` names that granularity, so the client can label
 --                               each point with the right period ("2023" / "duben 2023" / a date).
 --
 --                               place/team label each point and are mutually exclusive:
---                                 ≤40 rows, all at one place -> team  (place is redundant)
---                                 ≤40 rows or ≤20 days       -> place
+--                                 ≤60 rows, all at one place -> team  (place is redundant)
+--                                 ≤60 rows or ≤30 days       -> place
 --                                 otherwise                  -> both null
 --                               Either is null unless the group agrees on one value.
 --
 -- Run once in the Supabase SQL editor; re-run to replace on changes.
+--
+-- CREATE OR REPLACE cannot change a function's return type, so when the
+-- RETURNS TABLE shape changes Postgres errors with 42P13. DROP first (by full
+-- argument signature) makes this script safe to re-run through shape changes.
+
+DROP FUNCTION IF EXISTS get_timestamps_graph_stats(text[], text[], int[], text[], text[], text[]);
 
 CREATE OR REPLACE FUNCTION get_timestamps_graph_stats(
   p_team        text[]    DEFAULT NULL,
@@ -39,10 +49,14 @@ CREATE OR REPLACE FUNCTION get_timestamps_graph_stats(
   p_attack_type text[]    DEFAULT NULL
 )
 RETURNS TABLE (
-  dist_under_16     bigint,
+  dist_under_13     bigint,
+  dist_13_to_14     bigint,
+  dist_14_to_15     bigint,
+  dist_15_to_16     bigint,
   dist_16_to_17     bigint,
   dist_17_to_18     bigint,
-  dist_over_18      bigint,
+  dist_18_to_19     bigint,
+  dist_over_19      bigint,
   dist_unsuccessful bigint,
   progression       json
 )
@@ -91,14 +105,14 @@ AS $$
     SELECT
       -- ≤40 rows that all sit at a single place: the place is the same on every
       -- point and tells the reader nothing, so label points with the team instead.
-      (n_rows <= 40 AND one_place)                        AS show_team,
-      (n_rows <= 40 OR n_days <= 20)
-        AND NOT (n_rows <= 40 AND one_place)              AS show_place,
+      (n_rows <= 60 AND one_place)                        AS show_team,
+      (n_rows <= 60 OR n_days <= 30)
+        AND NOT (n_rows <= 60 AND one_place)              AS show_place,
       -- Granularity for the whole series; see the header comment.
       CASE
-        WHEN n_rows  <= 40 THEN 'row'
-        WHEN n_days  <= 20 THEN 'day'
-        WHEN n_years >= 4  THEN 'year'
+        WHEN n_rows  <= 60 THEN 'row'
+        WHEN n_days  <= 30 THEN 'day'
+        WHEN n_years >= 6  THEN 'year'
         ELSE                    'month'
       END                                                 AS bucket
     FROM counts
@@ -164,10 +178,14 @@ AS $$
     GROUP BY grp
   )
   SELECT
-    COUNT(*) FILTER (WHERE final_time IS NOT NULL AND final_time < 16)::bigint              AS dist_under_16,
+    COUNT(*) FILTER (WHERE final_time IS NOT NULL AND final_time < 13)::bigint                     AS dist_under_13,
+    COUNT(*) FILTER (WHERE final_time IS NOT NULL AND final_time >= 13 AND final_time < 14)::bigint AS dist_13_to_14,
+    COUNT(*) FILTER (WHERE final_time IS NOT NULL AND final_time >= 14 AND final_time < 15)::bigint AS dist_14_to_15,
+    COUNT(*) FILTER (WHERE final_time IS NOT NULL AND final_time >= 15 AND final_time < 16)::bigint AS dist_15_to_16,
     COUNT(*) FILTER (WHERE final_time IS NOT NULL AND final_time >= 16 AND final_time < 17)::bigint AS dist_16_to_17,
     COUNT(*) FILTER (WHERE final_time IS NOT NULL AND final_time >= 17 AND final_time < 18)::bigint AS dist_17_to_18,
-    COUNT(*) FILTER (WHERE final_time IS NOT NULL AND final_time >= 18)::bigint             AS dist_over_18,
+    COUNT(*) FILTER (WHERE final_time IS NOT NULL AND final_time >= 18 AND final_time < 19)::bigint AS dist_18_to_19,
+    COUNT(*) FILTER (WHERE final_time IS NOT NULL AND final_time >= 19)::bigint             AS dist_over_19,
     COUNT(*) FILTER (WHERE final_time IS NULL)::bigint                                      AS dist_unsuccessful,
     (SELECT COALESCE(json_agg(p ORDER BY p."group"), '[]'::json) FROM progression_agg p)   AS progression
   FROM base;

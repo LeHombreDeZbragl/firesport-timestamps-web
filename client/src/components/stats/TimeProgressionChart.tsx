@@ -162,7 +162,7 @@ export function TimeProgressionChart({
   if (progression.length < 2) {
     return (
       <div className="flex h-40 items-center justify-center text-sm text-surface-500">
-        Nedostatek dat pro graf vývoje
+        Nevhodná data pro graf vývoje
       </div>
     );
   }

@@ -199,10 +199,14 @@ router.get('/graph-stats', asyncHandler(async (req: Request, res: Response): Pro
   const row = Array.isArray(data) ? data[0] : data;
   const graphStats: GraphStatsResponse = row
     ? {
-        distUnder16:      Number(row.dist_under_16     ?? 0),
+        distUnder13:      Number(row.dist_under_13     ?? 0),
+        dist13To14:       Number(row.dist_13_to_14     ?? 0),
+        dist14To15:       Number(row.dist_14_to_15     ?? 0),
+        dist15To16:       Number(row.dist_15_to_16     ?? 0),
         dist16To17:       Number(row.dist_16_to_17     ?? 0),
         dist17To18:       Number(row.dist_17_to_18     ?? 0),
-        distOver18:       Number(row.dist_over_18      ?? 0),
+        dist18To19:       Number(row.dist_18_to_19     ?? 0),
+        distOver19:       Number(row.dist_over_19      ?? 0),
         distUnsuccessful: Number(row.dist_unsuccessful ?? 0),
         progression: Array.isArray(row.progression)
           ? (row.progression as RawProgression[]).map((p) => ({
@@ -220,7 +224,8 @@ router.get('/graph-stats', asyncHandler(async (req: Request, res: Response): Pro
           : [],
       }
     : {
-        distUnder16: 0, dist16To17: 0, dist17To18: 0, distOver18: 0,
+        distUnder13: 0, dist13To14: 0, dist14To15: 0, dist15To16: 0,
+        dist16To17: 0, dist17To18: 0, dist18To19: 0, distOver19: 0,
         distUnsuccessful: 0, progression: [],
       };
 

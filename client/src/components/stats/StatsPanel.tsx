@@ -127,8 +127,9 @@ export function StatsPanel({ stats, isLoading, graphStats, graphStatsLoading }: 
           <ChartCard label="Rozložení časů">
             <AttackDistributionChart
               graphStats={graphStats ?? {
-                distUnder16: 0, dist16To17: 0, dist17To18: 0,
-                distOver18: 0, distUnsuccessful: 0, progression: [],
+                distUnder13: 0, dist13To14: 0, dist14To15: 0, dist15To16: 0,
+                dist16To17: 0, dist17To18: 0, dist18To19: 0,
+                distOver19: 0, distUnsuccessful: 0, progression: [],
               }}
               isLoading={graphStatsLoading}
             />
