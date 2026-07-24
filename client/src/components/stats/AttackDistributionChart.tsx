@@ -34,7 +34,7 @@ const BUCKETS = [
   { key: 'dist17To18',       label: '17–18 s',    color: '#FB8C00' }, // yellow
   { key: 'dist18To19',       label: '18–19 s',    color: '#F4511E' }, // orange
   { key: 'distOver19',       label: '≥ 19 s',     color: '#E53935' }, // red
-  { key: 'distUnsuccessful', label: 'Nepovedené', color: '#6b7280' }, // gray (DNF)
+  { key: 'distUnsuccessful', label: 'NP', color: '#6b7280' }, // gray (DNF)
 ] as const;
 
 interface ChartEntry { label: string; color: string; value: number; }
