@@ -46,7 +46,38 @@ const apiRateLimiter = rateLimit({
 app.set('trust proxy', 1);
 
 // Security headers — sets X-Frame-Options, X-Content-Type-Options, HSTS, etc.
-app.use(helmet());
+// CSP is extended (beyond helmet's 'self'-only defaults) to allow Google
+// Analytics (gtag.js): the loader script from googletagmanager.com, its
+// inline bootstrap snippet in client/index.html (allowed via exact SHA-256
+// hash rather than 'unsafe-inline', so no other inline script is trusted),
+// and the beacon/collect requests gtag.js makes to google-analytics.com.
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        'script-src': [
+          "'self'",
+          'https://www.googletagmanager.com',
+          "'sha256-6uOQwjMhECoi1/3VpVDKSMPh7RqZVaHH6ecfrPDsMR8='",
+        ],
+        'connect-src': [
+          "'self'",
+          'https://www.google-analytics.com',
+          'https://*.google-analytics.com',
+          'https://*.analytics.google.com',
+          'https://www.googletagmanager.com',
+        ],
+        'img-src': [
+          "'self'",
+          'data:',
+          'https://www.google-analytics.com',
+          'https://www.googletagmanager.com',
+        ],
+      },
+    },
+  })
+);
 
 // Request / response logging — every request gets a unique ID for tracing.
 // The ID is exposed as an X-Request-Id response header for client-side debugging.
