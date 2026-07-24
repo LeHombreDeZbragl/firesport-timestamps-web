@@ -202,6 +202,15 @@ function App(): React.JSX.Element {
         >
           firesport.eu
         </a>
+        {' · '}
+        <a
+          href="https://forms.gle/MSY94h9kAJNdSrXG7"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-surface-400 underline underline-offset-2 hover:text-surface-200 transition-colors"
+        >
+          Feedback
+        </a>
       </footer>
       {showLoginModal && <AdminLoginModal onSuccess={handleLoginSuccess} onClose={() => setShowLoginModal(false)} />}
     </div>
