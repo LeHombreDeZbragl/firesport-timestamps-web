@@ -45,17 +45,32 @@ const apiRateLimiter = rateLimit({
 // real client IP rather than the proxy address.
 app.set('trust proxy', 1);
 
-// Security headers — sets X-Frame-Options, X-Content-Type-Options, HSTS, etc.
-// CSP is extended (beyond helmet's 'self'-only defaults) to allow Google
+// Security headers — sets X-Content-Type-Options, HSTS, etc.
+//
+// `frameguard` (the legacy X-Frame-Options header) is turned OFF: it can only
+// say DENY / SAMEORIGIN, so it can't allow specific *other* domains to embed
+// us. Cross-origin framing is instead controlled by the CSP `frame-ancestors`
+// directive below — it allows any *.firesport.eu portal (excr., vcbl., zl., …)
+// plus the firesport.eu apex to iframe the dashboard, and blocks everyone
+// else. (When frame-ancestors is present, modern browsers ignore
+// X-Frame-Options anyway, so dropping it avoids a conflicting signal.)
+//
+// CSP is also extended (beyond helmet's 'self'-only defaults) to allow Google
 // Analytics (gtag.js): the loader script from googletagmanager.com, its
 // inline bootstrap snippet in client/index.html (allowed via exact SHA-256
 // hash rather than 'unsafe-inline', so no other inline script is trusted),
 // and the beacon/collect requests gtag.js makes to google-analytics.com.
 app.use(
   helmet({
+    frameguard: false,
     contentSecurityPolicy: {
       directives: {
         ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        'frame-ancestors': [
+          "'self'",
+          'https://*.firesport.eu',
+          'https://firesport.eu',
+        ],
         'script-src': [
           "'self'",
           'https://www.googletagmanager.com',
