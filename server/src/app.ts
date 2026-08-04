@@ -54,12 +54,6 @@ app.set('trust proxy', 1);
 // plus the firesport.eu apex to iframe the dashboard, and blocks everyone
 // else. (When frame-ancestors is present, modern browsers ignore
 // X-Frame-Options anyway, so dropping it avoids a conflicting signal.)
-//
-// CSP is also extended (beyond helmet's 'self'-only defaults) to allow Google
-// Analytics (gtag.js): the loader script from googletagmanager.com, its
-// inline bootstrap snippet in client/index.html (allowed via exact SHA-256
-// hash rather than 'unsafe-inline', so no other inline script is trusted),
-// and the beacon/collect requests gtag.js makes to google-analytics.com.
 app.use(
   helmet({
     frameguard: false,
@@ -70,24 +64,6 @@ app.use(
           "'self'",
           'https://*.firesport.eu',
           'https://firesport.eu',
-        ],
-        'script-src': [
-          "'self'",
-          'https://www.googletagmanager.com',
-          "'sha256-6uOQwjMhECoi1/3VpVDKSMPh7RqZVaHH6ecfrPDsMR8='",
-        ],
-        'connect-src': [
-          "'self'",
-          'https://www.google-analytics.com',
-          'https://*.google-analytics.com',
-          'https://*.analytics.google.com',
-          'https://www.googletagmanager.com',
-        ],
-        'img-src': [
-          "'self'",
-          'data:',
-          'https://www.google-analytics.com',
-          'https://www.googletagmanager.com',
         ],
       },
     },
