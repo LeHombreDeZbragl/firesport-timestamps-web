@@ -19,7 +19,7 @@ primary_region = 'fra'
   auto_start_machines = true
   # 0 lets every machine autostop while idle; the proxy holds the first request
   # during the ~1 s wake. Setting this to 1 pins a machine 24/7 at ~$3.32/month.
-  min_machines_running = 0
+  min_machines_running = 1
 
   [[http_service.checks]]
     interval = '30s'
